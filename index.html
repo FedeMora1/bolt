@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<!-- `data-skin="warm"` is ADOPTED HERE as of 2026-09-01, moved up from the board
+     section it was previewed on. The selector in styles.css is doubled
+     (`[data-skin]` and `html[data-skin]`) precisely so this move works: on a
+     section it resolves by inheritance, but here both it and
+     `html[data-theme="dark"]` match the same element, and the bare attribute
+     selector would lose the specificity tie. -->
+<html lang="en" data-theme="dark" data-skin="warm">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bolt</title>
+<!-- Fixed two-colour lockup, not currentColor: the mark reads the same in both
+     themes on purpose. Browsers cache favicons harder than the no-store header
+     the rest of these files go out with, so a change here needs a hard refresh. -->
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<!-- Three roles, three families — see the type block in styles.css for why each.
+     Preconnected because the render-blocking stylesheet resolves to a second
+     origin for the font files themselves. `display=swap` so a cold cache or an
+     offline machine paints in the fallback stack rather than in nothing: this
+     app is served from localhost and is expected to work without a network. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <!-- Mark and word are one group: the flex centring applies to the pair, not
+       to each of them separately. -->
+  <div class="brand">
+    <img class="brand-mark" src="icon.svg" alt="" aria-hidden="true" width="28" height="28">
+    <h1>bolt</h1>
+  </div>
+
+  <div class="search" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+    <input id="search" type="text" placeholder="Add a ticker or company&hellip;" autocomplete="off"
+           aria-label="Search for a ticker or company" aria-controls="suggestions">
+    <ul id="suggestions" class="suggestions" role="listbox" hidden></ul>
+  </div>
+
+  <div class="topbar-actions">
+    <button id="open-history" class="btn btn-ghost" title="Score history for a symbol">History</button>
+    <button id="open-backtest" class="btn btn-ghost" title="Did past technical scores precede better returns?">Backtest</button>
+    <button id="open-ratings" class="btn btn-ghost" title="Have the model's 1-10 ratings preceded better returns? The only check that exists for the one field with no external evidence behind it.">Ratings</button>
+    <button id="refresh" class="btn btn-ghost" title="Refetch every price older than an hour; ratings refresh on their own schedule">Refresh</button>
+    <button id="theme-toggle" class="btn btn-ghost" title="Toggle light / dark" aria-label="Toggle theme">&#9788;</button>
+    <button id="open-key" class="btn btn-ghost" title="API key settings">Key</button>
+  </div>
+</header>
+
+<main>
+  <!-- ── Snapshot label ──────────────────────────────────────────────
+       Shown only in snapshot mode (hosted, no key). A dated statement of what
+       the board is, and the route to live data. -->
+  <div id="snapshot-bar" class="snapshot-bar" role="note" hidden>
+    <span class="snapshot-tag">Snapshot</span>
+    <span class="snapshot-text"><strong id="snapshot-date"></strong> &middot;
+      <span id="snapshot-count"></span> U.S.-listed stocks, scored as the board stood that day.
+      The board, detail panels, Backtest and Ratings all run on this data.</span>
+    <button id="snapshot-live" class="btn btn-ghost btn-sm" type="button">Use live data</button>
+  </div>
+
+  <!-- ── API key gate ─────────────────────────────────────────────── -->
+  <section id="key-gate" class="card key-gate" hidden>
+    <h2>Connect a data source</h2>
+    <!-- Rewritten by applyServerMode() when there is no serve.mjs behind the page. -->
+    <p class="muted" id="key-intro">
+      This app reads live analyst recommendation trends from
+      <a href="https://finnhub.io/register" target="_blank" rel="noopener">Finnhub</a>.
+      The free tier covers everything used here. The key is held by
+      <code>serve.mjs</code> as <code>FINNHUB_API_KEY</code> and attached to each
+      request there &mdash; it is never sent to this page, so it appears in no
+      URL, no console line and no screenshot of either.
+    </p>
+    <div id="key-finnhub" class="key-finnhub"></div>
+    <p id="static-note" class="muted" hidden>
+      You are on the hosted version. Two features need the local server
+      (<code>serve.mjs</code>) and are switched off here: <strong>Fundamentals</strong>,
+      because SEC EDGAR refuses requests from web pages, and <strong>Assess</strong>,
+      which needs an Anthropic key held server-side. Everything else runs in this browser.
+    </p>
+    <div id="key-legacy"></div>
+    <p class="key-form">
+      <button id="cache-clear" class="btn btn-ghost" type="button">Clear cached data</button>
+    </p>
+    <p id="key-status" class="key-status" role="status"></p>
+
+    <!-- ── Optional secondary sources, built from PROVIDERS ──────── -->
+    <div class="key-extra">
+      <h3 class="key-extra-head">Additional sources <span class="key-tag">all optional</span></h3>
+      <p class="muted key-extra-note">
+        Each is a separate free account with its own quota, so connecting several adds up.
+        Most have budgets far too small for 579 names and are used only for a symbol you
+        open; Polygon is the exception &mdash; metered per minute rather than per day, it
+        is what the Technicals board&rsquo;s price history comes from. Saving a key spends
+        one request to verify it. Keys live in this browser&rsquo;s <code>localStorage</code>
+        and are sent only to the provider they belong to.
+      </p>
+      <div id="key-sources"></div>
+    </div>
+  </section>
+
+  <!-- ── Watchlist table ──────────────────────────────────────────── -->
+  <section id="board" class="card">
+    <div class="card-head">
+      <h2>Board</h2>
+      <!-- One tab per registered scoring domain; built by renderModeTabs(). -->
+      <div id="board-modes" class="tabs" role="tablist" aria-label="Scoring domain"></div>
+      <select id="sector-filter" class="select" aria-label="Filter by sector"></select>
+      <!-- Controls that filter on one domain's own data, built by
+           renderSectionControls() from that domain's registry entry. Empty on
+           every other section, including Overall. -->
+      <div id="section-controls" class="section-controls"></div>
+
+      <!-- Applies to the board and the backtest alike: at most N per sector in
+           any one group, keeping the highest-scoring. Off by default. -->
+      <label class="filter-label" for="sector-cap"
+             title="Keep at most this many symbols per sector in any group, taking the highest-scoring in each. Applies to the board and to every backtest bucket. 0 turns it off.">Max/sector
+        <input id="sector-cap" class="num-input" type="number" min="0" max="20" step="1" value="0">
+      </label>
+      <p class="muted" id="board-meta"></p>
+    </div>
+
+    <!-- ── Filter panel ───────────────────────────────────────────────
+         Per-domain thresholds, intersected. This is what stands in for a
+         master composite: each domain keeps its own scale and its own veto,
+         and nothing is ever averaged across them. Rows are built from the
+         score registry by renderFilters(). -->
+    <!-- CLOSED BY DEFAULT since 2026-09-01. Open it was 397px of a 945px
+         viewport — most of the reason only three rows of the table were visible
+         without scrolling. The summary carries the active count so the state is
+         readable without expanding it. -->
+    <details id="filter-panel" class="filter-panel">
+      <summary>Filters<span id="filter-summary" class="muted filter-summary"></span></summary>
+      <div id="filters"></div>
+    </details>
+
+    <div id="progress" class="progress" hidden>
+      <div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div>
+      <span id="progress-text" class="progress-text"></span>
+      <button id="progress-cancel" class="btn btn-ghost btn-sm" type="button">Stop</button>
+    </div>
+
+    <!-- ── One action row ─────────────────────────────────────────────
+         Backfill and Fetch fundamentals were a row each, above the assess row:
+         three bands of controls at the same weight, all of them rare. They now
+         share a popover, and the row is the assess controls' row.
+
+         THE PROGRESS BARS ARE OUTSIDE THE POPOVER on purpose. A running job has
+         to stay visible when the menu is shut; inside it, closing the menu
+         would hide a job that is still spending calls. Every element keeps its
+         id, so the JS that toggles them is untouched. -->
+    <div class="board-actions">
+      <details id="data-menu" class="data-menu">
+        <summary class="data-menu-summary" title="Bulk data fetches. Both are slow, both are rare, and neither runs on its own.">Data</summary>
+        <div class="data-menu-panel">
+          <!-- Polygon backfill: a different provider from the Finnhub load, and
+               the two can overlap. -->
+          <div id="px-controls" class="px-controls" hidden>
+            <button id="px-start" class="btn btn-ghost btn-sm" type="button"
+                    title="Fetch daily closes from Polygon at 5 symbols a minute">Backfill prices</button>
+            <button id="px-cancel" class="btn btn-ghost btn-sm" type="button" hidden>Stop</button>
+          </div>
+
+          <!-- SEC EDGAR fundamentals. Explicit request only: it is never
+               triggered by a board render, because the proxy is single-threaded
+               and a full pass would stall every other request behind it.
+               Filings arrive weeks after a quarter ends, so there is nothing to
+               gain from running it often. -->
+          <div id="fx-controls" class="px-controls proxy-only">
+            <button id="fx-start" class="btn btn-ghost btn-sm" type="button"
+                    title="Fetch XBRL fundamentals from SEC EDGAR, at 10 symbols a second. Needs the local proxy in serve.mjs">Fetch fundamentals</button>
+            <button id="fx-cancel" class="btn btn-ghost btn-sm" type="button" hidden>Stop</button>
+          </div>
+        </div>
+      </details>
+
+      <div id="px-progress" class="progress px-progress" hidden>
+        <div class="progress-track"><div id="px-fill" class="progress-fill"></div></div>
+        <span id="px-text" class="progress-text"></span>
+      </div>
+      <div id="fx-progress" class="progress px-progress" hidden>
+        <div class="progress-track"><div id="fx-fill" class="progress-fill"></div></div>
+        <span id="fx-text" class="progress-text"></span>
+      </div>
+
+    <!-- Which model the per-row Assess buttons use. One setting for the board:
+         the button on a row is the trigger, this is the choice. Recorded on
+         every log entry, so the same names can be compared across models. -->
+    <div class="assess-controls">
+      <!-- `.proxy-only`: hidden in static mode, where there is no Anthropic
+           proxy. Export/Import stay — the log is local IndexedDB either way. -->
+      <label class="assess-model-label proxy-only" for="assess-model">Assess with</label>
+      <select id="assess-model" class="select proxy-only"
+              title="The model each Assess click uses. Stored per browser and recorded on every log entry, so briefs from different models on the same name stay comparable."></select>
+      <span id="assess-spend" class="muted assess-spend proxy-only"></span>
+
+      <!-- Batch. Deliberately two clicks: the first prices the run, the second
+           starts it. A single button that both quotes and charges gives no
+           moment to read the quote. -->
+      <span class="assess-batch proxy-only">
+        <label for="assess-n">top</label>
+        <input id="assess-n" class="input assess-n" type="number"
+               min="1" max="100" step="1" value="10"
+               title="How many rows from the top of the board as currently sorted and filtered. Each one is a separate paid call.">
+        <!-- A keyboard route into the QUEUE, not a second run list. Enter adds;
+             clicking Assess drains the box first, so nothing typed can be lost
+             by not pressing it. Resolved against the whole board rather than the
+             current sort and filter: naming a ticker is not a ranking question,
+             so refusing it because the board is showing one sector would be an
+             error message about the wrong thing. -->
+        <label for="assess-symbols" class="assess-or">or queue</label>
+        <input id="assess-symbols" class="input assess-symbols" type="text"
+               autocomplete="off" spellcheck="false" placeholder="tickers, Enter"
+               title="Type tickers and press Enter to add them to the queue, in the order typed. Comma-, space- or newline-separated. Not limited by the sector filter or the sort — anything still on the board can be named. Anything not on the board stays in the box so it can be corrected.">
+        <button id="assess-batch" class="btn"
+                title="Prices the run first. Nothing is spent until you confirm.">Assess top…</button>
+        <!-- Off by default. The quote names repeats either way; this decides
+             whether they run. Only SAME-model repeats are skippable — a repeat
+             on a different model is the retest pair, and is always kept. -->
+        <label class="assess-skip" for="assess-skip-repeats"
+               title="Leave out names already assessed on this model in the last 24 hours. Repeats on a DIFFERENT model are never skipped — those are the comparison pairs. The confirm dialog lists repeats whether this is ticked or not.">
+          <input id="assess-skip-repeats" type="checkbox"> skip repeats
+        </label>
+        <button id="assess-stop" class="btn btn-stop" hidden>Stop</button>
+        <span id="assess-progress" class="muted assess-progress"></span>
+      </span>
+
+      <!-- The log is the only unreproducible thing on this board: prices and
+           filings refetch, scores recompute, but a dated observation of what a
+           model said cannot be recreated at any price. It lives in one origin's
+           IndexedDB, so clearing site data destroys it. -->
+      <span class="assess-io">
+        <button id="assess-export" class="btn btn-ghost btn-sm"
+                title="Save the whole assessment log to a JSON file. It cannot be recreated by refetching anything.">Export log</button>
+        <button id="assess-import" class="btn btn-ghost btn-sm"
+                title="Merge a previously exported log. Add-only — nothing already held is overwritten.">Import</button>
+        <input id="assess-file" type="file" accept="application/json,.json" hidden>
+      </span>
+
+      <!-- What is lined up, in run order, with a way out of each of them.
+           Rendered by renderAssessQueue and hidden while the queue is empty:
+           a permanent strip saying "nothing" is the placeholder this board
+           refuses everywhere else. Clicks are delegated — the bar is rewritten
+           on every change, so the chips inside it do not survive one. -->
+      <div id="assess-queue" class="assess-queue" hidden></div>
+
+      <!-- The way back to a brief. Newest first, one chip per symbol, and each
+           one opens that row's detail panel scrolled to the brief. Without it
+           the only route to a paragraph that cost real money was to remember
+           the ticker and find the row again. Hidden until the log has
+           something in it. -->
+      <div id="assess-recent" class="assess-queue assess-recent" hidden></div>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="board-table">
+        <thead id="board-head"></thead>
+        <tbody id="board-body"></tbody>
+      </table>
+    </div>
+
+    <p id="board-empty" class="empty" hidden>
+      Your watchlist is empty. Search for a ticker above to add one.
+    </p>
+  </section>
+
+  <!-- ── Score history ────────────────────────────────────────────── -->
+  <section id="history" class="card" hidden>
+    <div class="card-head">
+      <h2>Score history</h2>
+      <div class="tabs" role="tablist" aria-label="History view">
+        <button id="tab-symbol" class="tab" type="button" role="tab"
+                aria-selected="true" aria-controls="history-by-symbol">By symbol</button>
+        <button id="tab-buckets" class="tab" type="button" role="tab"
+                aria-selected="false" aria-controls="history-buckets">Score buckets</button>
+      </div>
+      <select id="history-symbol" class="select" aria-label="Symbol to show history for"></select>
+      <select id="history-date" class="select" aria-label="Date to measure returns from" hidden></select>
+      <p class="muted" id="history-meta"></p>
+    </div>
+
+    <!-- One symbol's readings over time -->
+    <div id="history-by-symbol" role="tabpanel" aria-labelledby="tab-symbol">
+      <div class="table-scroll">
+        <table class="board-table">
+          <thead>
+            <tr>
+              <th scope="col">Logged</th>
+              <th class="num" scope="col">Composite</th>
+              <th class="num" scope="col">Raw</th>
+              <th class="num" scope="col">Analysts</th>
+              <th class="num" scope="col">Price</th>
+              <th class="num" scope="col" title="Change from that day's price to the latest price">Price since</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+
+      <p id="history-empty" class="empty" hidden></p>
+    </div>
+
+    <!-- Did that day's high scorers go on to outperform its low scorers? -->
+    <div id="history-buckets" role="tabpanel" aria-labelledby="tab-buckets" hidden>
+      <div class="table-scroll">
+        <table class="board-table agg-table">
+          <thead>
+            <tr>
+              <th scope="col" title="Composite score on the selected date">Composite band</th>
+              <th class="num" scope="col">Symbols</th>
+              <th class="num" scope="col" title="Mean return from that date's price to the current board price">Avg return</th>
+              <th class="num" scope="col" title="Median return from that date's price to the current board price">Median return</th>
+            </tr>
+          </thead>
+          <tbody id="buckets-body"></tbody>
+          <tfoot id="buckets-foot"></tfoot>
+        </table>
+      </div>
+
+      <p id="buckets-empty" class="empty" hidden></p>
+    </div>
+
+    <div class="history-foot">
+      <span class="muted" id="history-total"></span>
+      <button id="history-clear" class="btn btn-ghost btn-sm" type="button">Clear history</button>
+    </div>
+  </section>
+
+  <!-- ── Backtest ─────────────────────────────────────────────────── -->
+  <section id="backtest" class="card" hidden>
+    <div class="card-head">
+      <h2>Backtest</h2>
+      <!-- One tab per backtestable domain, plus Combined; built by renderBacktest(). -->
+      <div id="bt-tabs" class="tabs" role="tablist" aria-label="Score to test"></div>
+      <label class="filter-label" for="bt-months">Hold
+        <select id="bt-months" class="select">
+          <option value="1">1 month</option>
+          <option value="3" selected>3 months</option>
+          <option value="6">6 months</option>
+          <option value="12">12 months</option>
+        </select>
+      </label>
+      <label class="filter-label" for="bt-spacing">Every
+        <select id="bt-spacing" class="select">
+          <option value="1">1 month</option>
+          <option value="2">2 months</option>
+          <option value="3" selected>3 months</option>
+          <option value="6">6 months</option>
+        </select>
+      </label>
+      <label class="filter-label" for="bt-bucketing">Buckets
+        <select id="bt-bucketing" class="select">
+          <option value="quintiles" selected>Equal fifths</option>
+          <option value="bands">Score bands</option>
+        </select>
+      </label>
+      <p class="muted" id="bt-meta"></p>
+    </div>
+
+    <p class="muted bt-note">
+      Scores are computed from bars up to and including the start date &mdash; the series
+      is truncated there, so nothing after it is in scope. Forward return is the close
+      at the start date against the close one holding period later; symbols without a
+      complete forward window are excluded rather than measured over less time.
+      <strong>Combined</strong> is the plain average of the two scores, and covers only
+      symbols that have both &mdash; a name scored on one side alone is left out rather
+      than filed next to a genuinely combined one. Averaging pulls scores toward the
+      middle, so the fixed <em>score bands</em> leave the combined extremes nearly empty
+      and its spread is then a few symbols wide; <em>equal fifths</em> ranks each score
+      and cuts it into five groups of the same size, which is what makes the three
+      columns comparable.
+    </p>
+
+    <div id="bt-spread"></div>
+    <div id="bt-runs"></div>
+    <p id="bt-empty" class="empty" hidden></p>
+  </section>
+
+  <!-- ── Rating harness ───────────────────────────────────────────── -->
+  <section id="ratings" class="card" hidden>
+    <div class="card-head">
+      <h2>Rating harness</h2>
+      <label class="filter-label" for="rt-mindays">Older than
+        <select id="rt-mindays" class="select">
+          <option value="30" selected>30 days</option>
+          <option value="60">60 days</option>
+          <option value="90">90 days</option>
+          <option value="180">180 days</option>
+        </select>
+      </label>
+      <label class="filter-label" for="rt-basis">Return
+        <select id="rt-basis" class="select">
+          <option value="excess" selected>Excess vs SPY</option>
+          <option value="raw">Raw</option>
+        </select>
+      </label>
+      <p class="muted" id="rt-meta"></p>
+    </div>
+
+    <p class="rt-warn">
+      <strong>The rating is the one number on this board with no external evidence
+      behind it.</strong> Every other score &mdash; including everything marked
+      <em>untested</em> &mdash; descends from a published effect somebody measured on
+      somebody&rsquo;s data, even where this board has never confirmed it. The rating
+      descends from a model&rsquo;s judgment and nothing else. This page is the only
+      thing that could ever change that, and until it holds enough entries the rating
+      is untested in the strongest sense of the word.
+    </p>
+
+    <p class="muted bt-note">
+      Measured on this board&rsquo;s stored series, the cross-sectional standard deviation
+      of forward returns is 12.9 points at one month, 18.8 at three and 30.7 at six. At
+      six months the standard error of the top-minus-bottom spread is therefore about
+      19 points with 5 assessments per bucket, 14 with 10, 9 with 25 and 6 with 50 &mdash;
+      so with a few dozen logged assessments any spread smaller than roughly 27 points is
+      inside the noise. Detecting a spread of the size a useful rating might actually have
+      (5&ndash;10 points) would need 150&ndash;600 <em>per bucket</em>. This harness can
+      catch a large effect or a backwards one. It is not going to certify a small one, and
+      a reading that does not clear its own standard error is not a result.
+      <strong>Dates matter more than names:</strong> assessments run in one batch share a
+      market window, so their forward returns move together and the effective sample is
+      nearer the number of distinct days than the number of rows.
+    </p>
+
+    <p class="rt-warn rt-stale" id="rt-stale" hidden></p>
+    <div id="rt-diagnostics"></div>
+
+    <div id="rt-body"></div>
+    <p id="rt-empty" class="empty" hidden></p>
+  </section>
+
+  <!-- ── Detail panel ─────────────────────────────────────────────── -->
+  <section id="detail" class="card detail" hidden aria-live="polite"></section>
+</main>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="universe.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

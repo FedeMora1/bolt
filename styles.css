@@ -1,0 +1,1646 @@
+/* ── Design tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:          #f6f7f9;
+  --surface:     #ffffff;
+  --surface-2:   #f0f2f5;
+  --border:      #dfe3e8;
+  --text:        #14181d;
+  --text-muted:  #667085;
+  --accent:      #2563eb;
+  --accent-soft: #e6eeff;
+
+  /* ── The colour rule, as of 2026-09-01 ─────────────────────────
+     HUE MEANS DIRECTION. INTENSITY MEANS MAGNITUDE.
+
+     `--up` and `--down` had two jobs: the sign of a price move, and whether a
+     0-100 score sat above or below 50. The same `.up` class coloured a +2%
+     change and a score of 87, so a red change could sit beside a green score in
+     one row and read as a contradiction between two unrelated axes.
+
+     Now: green and red belong to SIGNED quantities with a real zero — a change,
+     a return, an upside. Scores are monochrome and say their magnitude with
+     weight (see .score-strong / .score-weak). One meaning per channel. */
+  --up:   #12a15c;
+  --down: #dc3d3d;
+
+  /* Attention without direction: a caveat, a one-time notice, a flagged event.
+     These used to borrow --r2 from the rating scale below, which quietly said
+     "moderate sell" about things that had nothing to do with analyst ratings. */
+  --warn: #b06a1f;
+
+  /* THE ANALYST RATING SCALE, strong sell → strong buy. It is a five-step
+     categorical palette and it belongs to the Analyst domain: the consensus
+     distribution bar and the monthly trend stack. Nothing outside that domain
+     should reach for it — a colour that means "hold" is not a general-purpose
+     amber. */
+  --r1: #c0392b;
+  --r2: #e08a4b;
+  --r3: #9aa3af;
+  --r4: #4a9d6a;
+  --r5: #12a15c;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+
+html[data-theme="dark"] {
+  --bg:          #0d1015;
+  --surface:     #151a21;
+  --surface-2:   #1c222b;
+  --border:      #262e39;
+  --text:        #e7ebf0;
+  --text-muted:  #8b95a3;
+  --accent:      #5b8df6;
+  --accent-soft: #1b2740;
+
+  --up:   #2fbd77;
+  --down: #f0655f;
+  --warn: #d99a4e;
+
+  --r1: #d8503f;
+  --r2: #e2954f;
+  --r3: #7b8593;
+  --r4: #43a86f;
+  --r5: #2fbd77;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+}
+
+/* ── The warm skin ─────────────────────────────────────────────────
+   PREVIEW SCOPE. Applied to `[data-skin="warm"]` — currently the board section
+   alone — so the palette can be judged against 560 rows of numbers before it
+   repaints anything else. Move the attribute to <html> to adopt it.
+
+   Derived from the mark: #412402 deep brown, #EF9F27 amber, #FAEEDA cream.
+
+   THE RULE THAT SHAPES THE WHOLE SET: amber is chrome, never data. The active
+   tab, focus rings, links, primary buttons, progress bars and the selected row
+   may be amber. Nothing in a cell may be. That single constraint is why two
+   colours below are NOT the obvious warm choice:
+
+   - `--warn` is a clay red, not an amber. It marks flagged events on a brief,
+     which is data; an amber there would be a third signal competing with the
+     chrome and the vocabulary would break again.
+   - `--r2` in the analyst scale moved off orange for the same reason. The
+     five-step scale runs red -> rose -> warm grey -> green now, stepping around
+     the amber band entirely rather than through it.
+
+   THE DOUBLE SELECTOR IS LOad-BEARING. Scoped to a section this works by
+   inheritance: #board carries its own custom properties, so the subtree resolves
+   against those whatever <html> says. Moved to <html> it would stop working —
+   both rules would then match the same element and `html[data-theme="dark"]`
+   (0,1,1) outranks a bare `[data-skin="warm"]` (0,1,0). The `html[...]` form
+   ties on specificity and wins on source order. */
+[data-skin="warm"],
+html[data-skin="warm"] {
+  /* A very dark warm brown, hsl(30, 37%, 7.5%). RAISED from #130F0C on
+     2026-09-01: at that value the ground was imperceptibly different from the
+     neutral #0D1015 it replaced, which defeated the point of the pass. The
+     warmth is meant to be visible, not merely present.
+
+     The whole ladder holds hue at 30° and DROPS SATURATION as lightness rises.
+     Carrying 37% saturation up to the surface would turn the cards orange; the
+     eye reads a saturated mid-brown as a colour and an unsaturated one as a
+     material, and these are meant to be material. */
+  --bg:          #1A130C;
+  /* hsl(30, 26%, 12%) — a visible step up, not a hairline apart. A card
+     separates from the page without the border doing the work. */
+  --surface:     #271F17;
+  --surface-2:   #342B22;
+  /* Warm, and deliberately close to the old value even though everything above
+     it moved: 560 rows means 560 of these, and a border that keeps pace with
+     the surface turns a dense table into a grid of lines. Against the lighter
+     surface it now reads as a hairline rather than a rule. */
+  --border:      #3C332B;
+
+  --text:        #FAEEDA;
+  /* COOLED from #A3937C on 2026-09-01. The first value sat in the same hue
+     family as the ground, and the Company column — muted tan on warm brown,
+     560 rows of it — separated less crisply than muted grey on neutral had.
+     Saturation down and hue nudged off the ground's 30°; contrast improves
+     slightly too, 5.5:1 to 5.6:1. The one place the warmth was a tax. */
+  --text-muted:  #9E968A;
+
+  --accent:      #EF9F27;
+  /* STUBBED, and only correct in dark. See the note in docs/NOTES.md: amber on
+     cream fails contrast as text, so a light warm theme needs a darker amber
+     (~#8A5209) in this slot. That is a decision, not a derivation, which is why
+     it is not made here. */
+  --accent-ink:  #EF9F27;
+  --accent-soft: #472E10;
+
+  /* Cooled slightly from the neutral theme's pair. The red especially: an
+     orange-red beside amber chrome on a brown ground is mud, so `--down` leans
+     pink and sits ~28° off the accent instead of ~8°. */
+  --up:   #4CC38A;
+  --down: #F2646E;
+  --warn: #D97A6C;
+
+  --r1: #D9534F;
+  --r2: #C0796B;
+  --r3: #8A7D6C;
+  --r4: #6FB58C;
+  --r5: #4CC38A;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px rgba(0, 0, 0, .28);
+
+  /* ── Type ────────────────────────────────────────────────────────
+     Three families, three jobs, and the mono is the one that had to be chosen
+     on evidence rather than taste — it sets 560 rows of digits.
+
+     DISPLAY — Space Grotesk. Geometric with deliberate irregularities (the
+     single-storey `a`, the flat-sided `o`) that give a lowercase wordmark
+     character at 17px without looking like a system UI face. Sits comfortably
+     beside a geometric bolt glyph.
+
+     BODY — Inter. Chosen against IBM Plex Sans, which is warmer and would have
+     matched the palette more happily: Inter has the larger x-height and the
+     tighter spacing at 12-13px, and most body text here is dense tooltip and
+     brief prose rather than display copy. Legibility at small sizes beat
+     tonal fit.
+
+     MONO — JetBrains Mono. Explicitly designed for long reading sessions with a
+     raised x-height, which is the stated requirement; the zero is dotted and
+     the `1` carries a full base serif, so 0/O and 1/l separate at 12px. Its
+     advance width is 0.6em, the same as Source Code Pro and IBM Plex Mono, so
+     it costs no column width against them. The raised x-height means it sets
+     LARGER than it measures — hence 12.5px in the table below rather than 13. */
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+
+  font-family: var(--body);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* Section labels and the card heading take the display face. Not the table:
+   a display face in 560 rows is a costume, not a hierarchy. */
+[data-skin="warm"] .card-head h2,
+[data-skin="warm"] .board-table th {
+  font-family: var(--display);
+}
+[data-skin="warm"] .card-head h2 { font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+[data-skin="warm"] .board-table th { font-weight: 500; }
+
+/* True tabular figures, stated rather than assumed. `tnum` is what keeps the
+   decimal points in a column when a digit changes width; `zero` turns on the
+   dotted zero that separates 0 from O. */
+[data-skin="warm"] .board-table td.num,
+[data-skin="warm"] .board-table td.ticker,
+[data-skin="warm"] .board-table td.rank {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Amber is chrome. Every one of these is a control or a state, never a value. */
+[data-skin="warm"] .tab[aria-selected="true"] { color: #2A1A05; background: var(--accent); }
+[data-skin="warm"] .progress-fill { background: var(--accent); }
+[data-skin="warm"] .board-table tbody tr.active { background: var(--accent-soft); }
+[data-skin="warm"] .board-table tbody tr:hover { background: var(--surface-2); }
+[data-skin="warm"] a { color: var(--accent); }
+[data-skin="warm"] .btn:focus-visible,
+[data-skin="warm"] .select:focus,
+[data-skin="warm"] .num-input:focus,
+[data-skin="warm"] input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+* { box-sizing: border-box; }
+
+/* The `font` SHORTHAND is why this needs var(--body) rather than inheriting it:
+   a shorthand sets font-family explicitly, so it would override the family set
+   on <html> by the skin and the whole app would stay on the system stack while
+   the tokens said otherwise. */
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 14px/1.5 var(--body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+
+/* The UA stylesheet's [hidden] { display: none } is weaker than any author
+   rule that sets display, so a `display: flex` class silently defeats the
+   hidden attribute — which is how the load progress bar came to sit on screen
+   permanently with an empty track. Restated here so it outranks them all. */
+[hidden] { display: none !important; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.muted { color: var(--text-muted); }
+
+/* ── Top bar ───────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 20px;
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+/* One group, centred as a pair. `align-items: center` on the flex line does
+   that; centring the mark and the word independently would let the optical
+   centre of the glyph drift from the x-height of the word. */
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* The mark carries its own two colours — see icon.svg. It is deliberately not
+   tinted, inverted or filtered by theme: it is a lockup, not an icon font. */
+.brand-mark { width: 28px; height: 28px; display: block; }
+
+.brand h1 {
+  margin: 0;
+  font-size: 17px; font-weight: 500; letter-spacing: -.01em;
+  white-space: nowrap;
+}
+
+.topbar-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+
+/* ── Search ────────────────────────────────────────────────────── */
+.search { position: relative; flex: 1 1 auto; max-width: 420px; }
+
+.search input {
+  width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+}
+
+.search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.suggestions {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  max-height: 320px; overflow-y: auto;
+  margin: 0; padding: 4px; list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.suggestions li {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer;
+}
+
+.suggestions li[aria-selected="true"], .suggestions li:hover {
+  background: var(--accent-soft);
+}
+
+.suggestions .sym { font: 600 13px/1 var(--mono); flex-shrink: 0; }
+
+.suggestions .desc {
+  color: var(--text-muted); font-size: 12px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  padding: 7px 12px;
+  font: inherit; font-weight: 500;
+  border-radius: 8px; border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.btn-ghost {
+  background: transparent; color: var(--text-muted);
+  border-color: var(--border);
+}
+.btn-ghost:hover { color: var(--text); background: var(--surface-2); }
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.08); }
+
+/* ── Layout ────────────────────────────────────────────────────── */
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card-head {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 12px;
+  padding: 11px 20px; border-bottom: 1px solid var(--border);
+}
+
+.card-head h2 { margin: 0; font-size: 14px; font-weight: 650; }
+
+/* `flex-shrink: 0` and no wrapping. With neither, a head carrying a lot of
+   controls — the backtest's, most of all — squeezed this line into a column one
+   word wide running down the side of the card. It wraps to its own row now
+   instead, which is what the flex-wrap above is for. */
+.card-head .muted {
+  margin: 0 0 0 auto; font-size: 12px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+.select {
+  padding: 5px 8px;
+  font: inherit; font-size: 12.5px;
+  color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 7px;
+  cursor: pointer; outline: none;
+}
+.select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+.filter-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-muted); white-space: nowrap;
+}
+
+.num-input {
+  width: 52px;
+  padding: 5px 6px;
+  font: inherit; font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 7px; outline: none;
+}
+.num-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ── Load progress ─────────────────────────────────────────────── */
+.progress {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.progress-track {
+  flex: 1 1 auto; height: 5px;
+  background: var(--border); border-radius: 999px; overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%; width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+
+.progress-text {
+  font-size: 12px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
+/* Backfill controls sit in their own strip: the job runs against a different
+   provider from the board load above, and the two can be in flight together. */
+/* ── One action row ────────────────────────────────────────────
+   Backfill, Fetch fundamentals and the assess controls were three bands of the
+   same weight stacked above the table — 140px of chrome for two buttons that
+   are pressed once a week. They share a row now, with the two fetches behind a
+   popover and their progress bars hoisted out of it so a running job stays
+   visible when the menu is shut. */
+.board-actions {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 7px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-menu { position: relative; flex-shrink: 0; }
+.data-menu-summary {
+  display: inline-block; padding: 3px 9px;
+  font-size: 12px; color: var(--text-muted);
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; list-style: none; user-select: none;
+}
+.data-menu-summary::-webkit-details-marker { display: none; }
+.data-menu-summary::after { content: " \25BE"; opacity: .7; }
+.data-menu-summary:hover { color: var(--text); background: var(--surface-2); }
+.data-menu[open] > .data-menu-summary { color: var(--text); border-color: var(--accent); }
+
+/* Absolute, so opening it does not push the table down — the whole point of
+   collapsing these was to stop chrome moving the data around. */
+.data-menu-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 15;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px; min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.px-controls { display: flex; align-items: center; gap: 8px; }
+.px-controls .btn { width: 100%; text-align: left; }
+
+/* In the row, not in the menu: these appear only while a fetch is running. */
+.board-actions .px-progress {
+  flex: 1 1 180px; max-width: 320px;
+  padding: 0; border-bottom: none; background: none;
+}
+
+.btn-sm { padding: 3px 9px; font-size: 12px; }
+
+.btn-active {
+  color: var(--accent) !important;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ── History tabs ──────────────────────────────────────────────── */
+.tabs {
+  display: inline-flex; gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+
+.tab {
+  padding: 4px 10px;
+  font: inherit; font-size: 12.5px;
+  color: var(--text-muted); background: none;
+  border: none; border-radius: 6px;
+  cursor: pointer; white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.tab-active, .tab-active:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* The aggregate rows are readings, not links — nothing opens when you click. */
+.agg-table tbody tr, .agg-table tfoot tr { cursor: default; }
+.agg-table tbody tr:hover { background: none; }
+
+.agg-total td {
+  padding: 11px 14px;
+  border-top: 2px solid var(--border);
+  font-weight: 650;
+}
+
+/* ── Score registry: status, filters ───────────────────────────── */
+/* Status is load-bearing, so it is visible wherever a domain is named. */
+.status-tag {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  border-radius: 999px; font-size: 10px; font-weight: 650;
+  text-transform: uppercase; letter-spacing: .04em; vertical-align: 1px;
+}
+/* MONOCHROME as of 2026-09-01. These sit on every filter row and every score
+   header — four filled colour chips repeated a dozen times down the panel, none
+   of which is a reading about a company. They are metadata about how much a
+   score has been checked, so they now say it with weight and an outline and
+   leave the colour channel to the data.
+
+   The one exception is `failed`, which is the only status that changes what the
+   board DOES with a column — it cannot sort, filter, or enter the backtest — so
+   it keeps a hue. A status that only describes evidence does not. */
+.status-validated { border: 1px solid var(--border); color: var(--text); font-weight: 700; }
+.status-external  { border: 1px solid var(--border); color: var(--text-muted); }
+.status-untested  { border: 1px dashed var(--border); color: var(--text-muted); }
+.status-failed    { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
+
+.status-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  margin-left: 6px; vertical-align: 1px;
+}
+.status-dot.status-validated { background: var(--up); }
+.status-dot.status-external  { background: var(--accent); }
+.status-dot.status-untested  { background: var(--text-muted); }
+.status-dot.status-failed    { background: var(--down); }
+
+/* A failed domain's column: present and readable, visibly not a control. */
+th.col-failed, td.col-failed { opacity: .55; }
+
+/* What a status rests on. Sits under a score breakdown, because a tag alone
+   invites the reader to assume the reason — and for `external` the reason is
+   the part that varies. */
+.evidence {
+  margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+  background: var(--surface-2, color-mix(in srgb, var(--text-muted) 7%, transparent));
+  border-left: 3px solid color-mix(in srgb, var(--text-muted) 35%, transparent);
+  font-size: 12px; line-height: 1.5;
+}
+.evidence p { margin: 0 0 6px; color: var(--text-muted); }
+.evidence p:last-child { margin-bottom: 0; }
+.evidence strong { color: var(--text); font-weight: 650; }
+
+/* A measured limit on a score, not a caveat about the evidence behind it. */
+.evidence p.caveat { color: var(--text); }
+.evidence p.caveat strong { color: var(--down); }
+
+/* Past the end of a tanh curve's resolution. Dotted underline so it reads as a
+   qualified value rather than a plain number — and never as the em dash that
+   means no score at all. */
+.saturated {
+  border-bottom: 1px dotted currentColor;
+  opacity: .8; cursor: help;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Overall is cohort-relative once any input is. Marked on the tab itself
+   because the number gives no hint of it. */
+.rel-tag {
+  margin-left: 5px; padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  color: var(--text-muted);
+  font-size: 9px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+/* A rating formed against a price the stock has since left. */
+.pre-move { font-weight: 650; cursor: help; }
+
+/* ── Assessment ─────────────────────────────────────────────────── */
+/* WRAPS AS A ROW, rather than squeezing its children. Without this the flex
+   line just shrinks whatever is most compressible, and adding the ticker box
+   broke "Assess top…" and "skip repeats" onto two lines each inside controls
+   sized for one — a button that reads "Assess / top…" looks like a rendering
+   fault rather than a full toolbar. Wrapping moves the overflow to a second
+   line and leaves every label intact. */
+.assess-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; row-gap: 6px; }
+.assess-model-label {
+  color: var(--text-muted); font-size: 11px; font-weight: 650;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+.assess-spend { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+/* This number is computed here, not billed by Anthropic. The tag carries the
+   difference so the figure is never read as an invoice. */
+.assess-est {
+  padding: 0 4px; margin-right: 2px; border-radius: 3px;
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  color: var(--text-muted);
+  font-size: 9px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase;
+  cursor: help; vertical-align: 1px;
+}
+.assess-reconcile { margin-left: 6px; color: var(--accent); text-decoration: none; }
+.assess-reconcile:hover { text-decoration: underline; }
+/* The ceiling is reached: the next Assess click will be refused, and saying so
+   here is cheaper than finding out by clicking. */
+.assess-spend-over { color: var(--down); font-weight: 650; }
+
+/* Icon-sized. This button was the floor on row height — at a text label it kept
+   the row at 38px however tight the cell padding got. */
+.row-assess {
+  width: 22px; height: 20px; padding: 0; line-height: 18px; text-align: center;
+  border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  font: inherit; font-size: 11px;
+}
+.row-assess:hover:not(:disabled) { color: var(--text); border-color: var(--accent); }
+.row-assess:disabled { opacity: .6; cursor: default; }
+
+/* Waiting its turn. Filled rather than merely outlined, so a lined-up row is
+   findable while scrolling past at speed — the queue is built by scanning, and
+   an outline this size reads as noise at that pace. The label is the position
+   in line, in tabular figures so a two-digit queue does not shift it off
+   centre. Hover goes red because the click removes it. */
+.row-assess.is-queued {
+  background: var(--accent); border-color: var(--accent);
+  color: var(--bg); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.row-assess.is-queued:hover { border-color: var(--down); color: var(--bg); }
+
+/* In flight. The one call that is already sent: outlined rather than filled, so
+   it is plainly a different state from waiting, and `default` because clicking
+   it does nothing — the money is spent and the brief is coming. */
+.row-assess.is-live {
+  border-color: var(--accent); color: var(--accent);
+  cursor: default;
+  animation: assess-pulse 1.4s ease-in-out infinite;
+}
+.row-assess.is-live:hover { border-color: var(--accent); color: var(--accent); }
+@keyframes assess-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  .row-assess.is-live { animation: none; }
+}
+
+.assess-log { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.assess-log .section-title .muted { font-size: 11.5px; font-weight: 400; margin-left: 8px; }
+
+.brief-meta {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin: 8px 0 12px; padding: 7px 11px; border-radius: 7px;
+  background: color-mix(in srgb, var(--text-muted) 7%, transparent);
+  font-size: 12px; color: var(--text-muted);
+}
+/* A brief resting on almost nothing should not look like one resting on a lot. */
+.brief-meta.brief-thin {
+  background: color-mix(in srgb, var(--down) 12%, transparent);
+  color: var(--down);
+}
+.brief-flagcount { cursor: help; }
+
+.brief-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 14px; }
+.brief-tag-label {
+  color: var(--text-muted); font-size: 9.5px; font-weight: 650;
+  letter-spacing: .04em; text-transform: uppercase; margin-right: 2px;
+}
+.brief-tag-label:not(:first-child) { margin-left: 10px; }
+.brief-tag {
+  padding: 1px 7px; border-radius: 999px; font-size: 11px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.tag-event { color: var(--warn); }
+.tag-structural { color: var(--text-muted); }
+
+/* The brief broke its own rules. Shown, never hidden — a suppressed violation
+   is invisible, and the drift is the thing worth recording. */
+.brief-directional {
+  margin: 0 0 14px; padding: 8px 12px; border-radius: 7px;
+  background: color-mix(in srgb, var(--down) 13%, transparent);
+  border-left: 3px solid var(--down);
+  color: var(--text); font-size: 12px; line-height: 1.5; cursor: help;
+}
+.brief-directional b { color: var(--down); }
+
+/* The four sections read as a wall: 11px muted uppercase headings were the only
+   thing separating four dense paragraphs, and at 78ch the measure ran long
+   enough that the eye lost the line. Real headings in the display face, a
+   shorter measure, and roughly double the spacing between sections. */
+.brief-section { margin-bottom: 26px; }
+.brief-section h4 {
+  margin: 0 0 8px;
+  font-family: var(--display, inherit);
+  font-size: 13.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: var(--text);
+}
+.brief-section p {
+  margin: 0; font-size: 13px; line-height: 1.68;
+  max-width: 68ch; white-space: pre-wrap; color: var(--text);
+}
+.brief-sources { margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.7; }
+.brief-sources a { color: var(--accent); }
+.brief-older { margin-top: 12px; font-size: 11.5px; }
+
+/* A scored column on Overall that did NOT feed the number. Dimmed and labelled,
+   because position in the row says nothing about whether it was counted. */
+.col-aside { opacity: .82; }
+.col-aside-tag {
+  display: block; margin-top: 1px;
+  color: var(--text-muted);
+  font-size: 8.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase;
+}
+td.col-aside-cell { opacity: .82; }
+
+/* Registered domains that are scored but deliberately not in Overall. Set
+   apart from the contribution chips on purpose: the readings are worth seeing
+   next to Overall, and must not read as part of it. */
+.detail-aside {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 10px 0 0; padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--text-muted) 6%, transparent);
+  border-left: 3px dashed color-mix(in srgb, var(--text-muted) 40%, transparent);
+  font-size: 12px;
+}
+.aside-tag {
+  padding: 1px 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 20%, transparent);
+  color: var(--text-muted);
+  font-size: 9.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase;
+}
+.aside-domain { display: inline-flex; align-items: center; gap: 8px; }
+.aside-domain > b { color: var(--text); font-weight: 650; }
+.aside-part {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 1px 7px; border-radius: 6px;
+  background: var(--surface-2, color-mix(in srgb, var(--text-muted) 10%, transparent));
+  color: var(--text-muted); cursor: help;
+  font-variant-numeric: tabular-nums;
+}
+.aside-part b { color: var(--text); font-weight: 650; }
+
+/* No longer an SEC registrant: acquired, taken private or delisted. Marked
+   rather than removed — a row that disappears explains nothing. */
+.delisted {
+  margin-left: 5px; padding: 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--down) 20%, transparent);
+  color: var(--down);
+  font-size: 9px; font-weight: 650; letter-spacing: .03em; text-transform: uppercase;
+  white-space: nowrap; vertical-align: 1px; cursor: help;
+}
+
+/* What a factor reads without the single bar that dominates it. Shown beside
+   the reported figure, never instead of it — the cause of the bar is not
+   established, so neither number is presented as the correct one. */
+.ex-bar {
+  margin-left: 4px; cursor: help;
+  color: var(--text-muted);
+  font-size: 11px; font-variant-numeric: tabular-nums;
+  border-bottom: 1px dashed color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+.evidence-head { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+th.col-failed { cursor: default; }
+
+/* Overall: a ranking across domains, marked as the composite view it is. */
+.tab-overall { font-weight: 700; }
+.overall-cell { font-weight: 700; }
+.overall-partial {
+  font-size: 10px; font-weight: 500; color: var(--text-muted); margin-left: 3px;
+}
+
+/* The detail panel's domain tabs, and the Overall chip beside them. */
+.detail-tabs {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  padding: 8px 20px; border-bottom: 1px solid var(--border);
+}
+.overall-chip {
+  margin-left: auto; font-size: 11.5px; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.overall-chip strong { color: var(--text); font-size: 12.5px; }
+.overall-part {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border: 1px solid var(--border); border-radius: 999px;
+}
+.overall-part b { color: var(--text); font-variant-numeric: tabular-nums; }
+.overall-weight {
+  font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);
+}
+
+/* Closed by default. Open, this was 397px of a 945px viewport — the single
+   biggest reason only three rows of the table were visible without scrolling. */
+.filter-panel {
+  border-bottom: 1px solid var(--border);
+  padding: 7px 20px; font-size: 12.5px;
+}
+.filter-panel > summary {
+  cursor: pointer; font-weight: 650; list-style-position: outside;
+}
+.filter-summary { margin-left: 10px; font-weight: 400; }
+
+/* A filtered board must say so without being opened: the count alone is easy to
+   read past, and a board silently showing a subset is the one state where a
+   collapsed panel could mislead. */
+.filter-panel-active > summary { color: var(--accent); }
+.filter-panel-active .filter-summary { color: var(--accent); font-weight: 550; }
+
+#filters {
+  display: flex; flex-wrap: wrap; gap: 8px 22px;
+  margin-top: 10px;
+}
+.filter-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 7px;
+}
+.filter-row.filter-active { border-color: var(--accent); background: var(--accent-soft); }
+.filter-row.filter-off { opacity: .6; }
+.filter-name { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.filter-min { display: flex; align-items: center; gap: 4px; color: var(--text-muted); }
+.filter-min .num-input { width: 62px; }
+.filter-note { font-size: 11.5px; }
+
+/* ── Backtest ──────────────────────────────────────────────────── */
+/* The run count is a sample size only when the windows do not overlap; when
+   they do, the header says so and this is what makes that register. */
+.meta-warn { color: var(--warn, #d9922b) !important; }
+.bt-note {
+  margin: 0 !important;
+  padding: 12px 20px;
+  max-width: 88ch;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The comparison sits above the per-date detail and is the thing being read
+   first, so it gets a heavier rule under it than the runs get between them. */
+.bt-spread {
+  border-bottom: 2px solid var(--border);
+  background: var(--accent-soft);
+}
+.bt-spread .agg-table { background: none; }
+
+/* The column matching the selected tab. The spread table shows every score at
+   once, so without this the tab appears to do nothing when it is really
+   pointing at one of the columns already on screen. */
+/* A NEUTRAL WASH WITH AMBER RULES, not an amber wash. Amber is chrome and the
+   selection IS chrome, but a 14% amber fill tinted the cells themselves, and a
+   red −10.71% sitting on warm amber is a legibility cost the highlight was
+   never worth. The rules down the sides carry the selection; the ground stays
+   the same material as every other cell. */
+.col-active {
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  box-shadow: inset 1px 0 0 var(--accent), inset -1px 0 0 var(--accent);
+}
+thead .col-active { color: var(--accent); font-weight: 700; }
+
+/* Market context, not a score — set apart so it is not read as another bucket. */
+.bench-col { border-left: 1px solid var(--border); }
+.bench-row td { color: var(--text-muted); font-weight: 500; }
+
+.bt-run { border-bottom: 1px solid var(--border); }
+.bt-run:last-child { border-bottom: none; }
+
+.bt-run-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  margin: 0; padding: 14px 20px 6px;
+  font-size: 13px; font-weight: 650;
+}
+.bt-run-head .muted { font-size: 11.5px; font-weight: 400; margin-left: auto; }
+
+.history-foot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.history-foot .muted { margin-right: auto; font-variant-numeric: tabular-nums; }
+
+/* Cached prices that are no longer intraday read as reference, not live. */
+.stale { color: var(--text-muted) !important; opacity: .75; }
+
+/* ── API key gate ──────────────────────────────────────────────── */
+.key-gate { padding: 20px; }
+.key-gate h2 { margin: 0 0 6px; font-size: 15px; }
+.key-gate p { margin: 0 0 14px; max-width: 62ch; font-size: 13px; }
+
+.key-form { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.key-form input {
+  flex: 1 1 260px;
+  padding: 8px 12px; font: inherit;
+  color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; outline: none;
+}
+.key-form input:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.key-status { margin: 12px 0 0 !important; font-size: 12.5px; }
+.key-status.ok   { color: var(--up); }
+.key-status.fail { color: var(--down); }
+
+/* Where the Finnhub key input used to be. The key is on the server now, so this
+   block reports rather than collects — see showKeyGate. */
+.key-finnhub { margin: 4px 0 14px; }
+.key-finnhub p { margin: 0 0 6px !important; max-width: 68ch; font-size: 12.5px; }
+.key-finnhub code {
+  padding: 1px 5px; border-radius: 5px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.key-ok  { color: var(--up); }
+.key-bad { color: var(--down); }
+
+/* The one-time hand-over for a key an older version left in localStorage.
+   Deliberately loud: it is the only state in this panel that asks for an
+   action, and it disappears for good once taken. */
+.key-legacy {
+  margin: 0 0 16px; padding: 14px 16px;
+  border: 1px solid var(--warn); border-radius: 10px;
+  background: var(--surface-2);
+}
+.key-legacy h3 { margin: 0 0 6px; font-size: 13.5px; font-weight: 650; }
+.key-legacy p.muted { margin: 0 0 10px !important; max-width: 68ch; font-size: 12.5px; }
+.key-legacy .btn + .btn { margin-left: 8px; }
+
+/* Secondary sources. Set apart from the Finnhub form above them, because
+   connecting any of them is optional and their quotas behave nothing like
+   Finnhub's. */
+.key-extra {
+  margin-top: 24px; padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.key-extra-head {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px; font-size: 14px; font-weight: 650;
+}
+
+.key-extra-note { margin: 0 0 4px !important; max-width: 68ch; font-size: 12.5px; }
+
+.key-source { padding: 16px 0; border-bottom: 1px solid var(--border); }
+.key-source:last-child { border-bottom: none; padding-bottom: 4px; }
+
+.key-source h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 6px; font-size: 13.5px; font-weight: 650;
+}
+
+.key-source p.muted { margin: 0 0 10px !important; max-width: 68ch; font-size: 12.5px; }
+.key-source em { color: var(--warn); font-style: normal; }
+
+.key-tag {
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10.5px; font-weight: 550; letter-spacing: .04em; text-transform: uppercase;
+}
+
+.key-budget {
+  margin: 8px 0 0 !important;
+  font-size: 12px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Board table ───────────────────────────────────────────────── */
+/* Horizontal scrollbar at the TOP of the table, not the bottom.
+
+   With ~580 rows the bottom of the board is thousands of pixels down, so a
+   scrollbar rendered there is effectively unreachable — you had to scroll the
+   page to its end to scroll the table sideways.
+
+   The container is flipped vertically and its contents flipped back, which
+   renders the scrollbar at the visual top while leaving the content upright.
+   rotateX mirrors the Y axis only, so left/right scrolling is unaffected and
+   shift+wheel still goes the way it looks.
+
+   The caveat to know: the transform creates a containing block, so a
+   `position: sticky` element inside this container would anchor to it rather
+   than to the viewport. Nothing here is sticky (the topbar is, and it is
+   outside). If a sticky column header is ever wanted, this needs replacing
+   with a synced scrollbar element instead. */
+.table-scroll { overflow-x: auto; transform: rotateX(180deg); }
+.table-scroll > * { transform: rotateX(180deg); }
+
+.board-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.board-table th {
+  padding: 7px 12px;
+  text-align: left; font-weight: 550; font-size: 11.5px;
+  letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* Numbers right, everything else left, and the figures share one advance width
+   so columns line up on the decimal without being tabulated by hand. The mono
+   face covers most of this; `tabular-nums` is what makes the minus sign and the
+   percent glyph hold their column too. */
+.board-table th.num, .board-table td.num { text-align: right; }
+.board-table td.num { font-variant-numeric: tabular-nums; }
+
+.board-table th.sortable { cursor: pointer; user-select: none; }
+.board-table th.sortable:hover { color: var(--text); }
+.board-table th[data-dir]::after {
+  content: "\2191"; margin-left: 5px; opacity: .9;
+}
+.board-table th[data-dir="desc"]::after { content: "\2193"; }
+
+/* 6px, from 11px. The row was 46px tall for 13px type — padding doing more work
+   than the type asked for. 34px is the target and the action buttons had to
+   shrink to reach it; see .row-assess. */
+.board-table td {
+  padding: 5px 12px;
+  line-height: 1.3;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+/* Pinned so the text columns stop resizing under the numbers. Ticker and
+   Company were content-sized, so every repaint that changed a score could
+   shift them sideways — the columns visibly jumped on each price refresh. */
+.board-table td.ticker, .board-table th.ticker-col { width: 74px; }
+.board-table td.company, .board-table th.company-col {
+  width: 22%; max-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* The trailing action columns are controls, not data, and were competing with
+   it at equal width. */
+.board-table th.action-col, .board-table td.action-col { width: 1%; white-space: nowrap; }
+
+/* The assessed column. Narrow, and its header carries the whole field's
+   UNSUPPORTED claim rather than each populated cell repeating it. */
+.board-table th.assessed-col, .board-table td.assessed-col { width: 1%; white-space: nowrap; }
+.assessed-head { cursor: help; }
+/* Which model wrote the reading. Smaller and muted so it reads as provenance
+   rather than as another number in a column of numbers, and NOT tabular — it is
+   the one thing in this cell that is not a figure, and lining it up on digit
+   widths only makes it look like one. */
+.assessed-by {
+  font-size: 10.5px; color: var(--text-muted);
+  font-variant-numeric: normal; letter-spacing: .02em;
+}
+/* Older than the shortest scoring horizon. Opacity, not a second colour: a
+   stale reading is the same claim, further from the price it was made against. */
+.assessed-stale { opacity: .55; }
+
+.board-table tbody tr { cursor: pointer; }
+.board-table tbody tr:hover { background: var(--surface-2); }
+.board-table tbody tr.active { background: var(--accent-soft); }
+.board-table tbody tr:last-child td { border-bottom: none; }
+
+.insider-cell { white-space: nowrap; font-size: 12px; }
+
+.rank-col { width: 1%; text-align: right !important; }
+
+.rank {
+  width: 1%;
+  text-align: right;
+  color: var(--text-muted);
+  font: 12px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px !important;
+}
+
+.ticker { font: 600 13px/1 var(--mono); }
+
+.company {
+  max-width: 220px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12.5px; }
+
+/* Hue: reserved for signed quantities with a real zero — a change, a return,
+   an upside. Nothing else may use these two. */
+.up   { color: var(--up); }
+.down { color: var(--down); }
+
+/* Intensity: a 0-100 score, monochrome. Three steps rather than a gradient,
+   because the thresholds these come from (45 / 55) are steps too, and a smooth
+   ramp would imply a precision the cutoff does not have.
+
+   Weight and not colour, so seven score columns beside each other read as one
+   material with texture rather than as seven traffic lights. The neutral middle
+   is deliberately unstyled: most scores land there and marking them would make
+   the marking meaningless. */
+.score-strong { font-weight: 650; color: var(--text); }
+.score-weak   { font-weight: 400; color: var(--text-muted); }
+
+.row-remove {
+  padding: 2px 7px; line-height: 1.2;
+  background: none; border: none; border-radius: 5px;
+  color: var(--text-muted); font-size: 16px; cursor: pointer;
+}
+.row-remove:hover { background: var(--surface-2); color: var(--down); }
+
+/* ── Consensus score ───────────────────────────────────────────── */
+.consensus { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+
+.consensus-score {
+  font: 600 13px/1 var(--mono);
+  min-width: 30px;
+}
+
+/* The composite is the ranking number, so it carries the most weight visually. */
+.composite-cell { font-weight: 650; font-size: 13px; color: var(--text); }
+
+.consensus-label {
+  padding: 2px 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em;
+  color: #fff;
+}
+
+/* ── Distribution bar ──────────────────────────────────────────── */
+.dist {
+  display: flex; width: 132px; height: 8px;
+  border-radius: 999px; overflow: hidden;
+  background: var(--surface-2);
+}
+.dist span { height: 100%; }
+.dist .s5 { background: var(--r5); }
+.dist .s4 { background: var(--r4); }
+.dist .s3 { background: var(--r3); }
+.dist .s2 { background: var(--r2); }
+.dist .s1 { background: var(--r1); }
+
+/* ── Detail panel ──────────────────────────────────────────────── */
+.detail { padding: 0; }
+
+.detail-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+}
+
+/* The detail view replaces the board, so it needs its own way out. */
+.detail-back { flex: 0 0 auto; white-space: nowrap; }
+
+.detail-logo {
+  width: 40px; height: 40px; border-radius: 8px;
+  object-fit: contain; background: var(--surface-2); padding: 4px;
+}
+
+.detail-title h2 { margin: 0; font-size: 16px; font-weight: 650; }
+.detail-title p  { margin: 2px 0 0; font-size: 12.5px; color: var(--text-muted); }
+
+.detail-price { margin-left: auto; text-align: right; }
+.detail-price .p { font: 600 20px/1.2 var(--mono); font-variant-numeric: tabular-nums; }
+.detail-price .c { font: 13px/1.4 var(--mono); }
+
+.detail-body {
+  display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px;
+  padding: 20px;
+}
+
+@media (max-width: 760px) {
+  .detail-body { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; }
+  .search { order: 3; max-width: none; flex-basis: 100%; }
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 11.5px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Stacked monthly trend chart */
+.trend { display: flex; align-items: flex-end; gap: 14px; height: 190px; }
+
+.trend-col {
+  flex: 1 1 0; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; height: 100%;
+}
+
+.trend-stack {
+  width: 100%; max-width: 62px;
+  flex: 1 1 auto;
+  display: flex; flex-direction: column-reverse;
+  border-radius: 5px; overflow: hidden;
+  background: var(--surface-2);
+}
+
+.trend-stack span { width: 100%; position: relative; }
+.trend-stack .s5 { background: var(--r5); }
+.trend-stack .s4 { background: var(--r4); }
+.trend-stack .s3 { background: var(--r3); }
+.trend-stack .s2 { background: var(--r2); }
+.trend-stack .s1 { background: var(--r1); }
+
+.trend-label {
+  font-size: 11px; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  margin-top: 14px; font-size: 11.5px; color: var(--text-muted);
+}
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i {
+  width: 9px; height: 9px; border-radius: 2px; display: inline-block;
+}
+
+/* The left column stacks several sections; the sidebar stays a single block. */
+.detail-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+
+/* Six-month price line. The SVG is stretched to the panel width, so it carries
+   no text — the labels sit in the flanking divs where scaling cannot skew them,
+   and the line keeps its width via vector-effect. */
+.pchart { display: block; width: 100%; height: 150px; }
+
+.pchart-head {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 8px; font-size: 12px;
+}
+.pchart-head .muted { margin-left: auto; font-variant-numeric: tabular-nums; }
+.pchart-change { font-family: var(--mono); font-weight: 600; }
+.pchart-change.up { color: var(--up); }
+.pchart-change.down { color: var(--down); }
+
+.pchart-axis {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; font-size: 11px; color: var(--text-muted);
+}
+
+.chart-msg {
+  margin: 0; padding: 28px 20px; text-align: center;
+  font-size: 12.5px; color: var(--text-muted);
+  background: var(--surface-2); border-radius: 8px;
+}
+
+/* Monthly records + score breakdown */
+.mini-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+.mini-table th, .mini-table td {
+  padding: 7px 8px; text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.mini-table thead th {
+  color: var(--text-muted); font-weight: 600; font-size: 11px; white-space: nowrap;
+}
+.mini-table th.num, .mini-table td.num {
+  text-align: right;
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+}
+.mini-table thead th.num { font-family: inherit; }
+.mini-table tbody tr:last-child > * { border-bottom: none; }
+.mini-table .period { white-space: nowrap; }
+
+/* Zeroes are structure, not signal — keep them readable but out of the way. */
+.mini-table .zero { color: var(--text-muted); opacity: .45; }
+
+.bucket-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 2px; margin-right: 5px;
+}
+
+.baseline-row > td { background: var(--surface-2); }
+
+.tag {
+  margin-left: 6px; padding: 0 4px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 4px;
+}
+
+.breakdown th { font-weight: 500; white-space: nowrap; }
+.breakdown .term-input { color: var(--text-muted); font-size: 11.5px; }
+.breakdown .adj-pos { color: var(--up); }
+.breakdown .adj-neg { color: var(--down); }
+
+/* The term that actually carries the score. Eight of nine rows read `0%` and
+   `—`, and the one doing the work differed only by having numbers in it. */
+.breakdown tbody tr.term-active > * { background: var(--surface-2); }
+
+.breakdown .total > * {
+  border-top: 2px solid var(--border); border-bottom: none;
+  padding-top: 9px; font-weight: 600;
+}
+
+/* A term that contributed nothing — short of bars, or excluded by the model.
+   Dimmed rather than dropped: its absence is part of what the table explains. */
+.breakdown .term-absent th,
+.breakdown .term-absent .num { color: var(--text-muted); }
+
+.breakdown-note {
+  margin: 8px 0 0; font-size: 11.5px; color: var(--text-muted);
+}
+
+/* Stat list */
+.stats { display: flex; flex-direction: column; gap: 1px; background: var(--border);
+         border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.stats div {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 9px 12px; background: var(--surface); font-size: 12.5px;
+}
+.stats dt { color: var(--text-muted); }
+.stats dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ── Misc ──────────────────────────────────────────────────────── */
+.empty { padding: 32px 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+.skeleton {
+  display: inline-block; height: 11px; width: 54px; border-radius: 4px;
+  background: var(--surface-2);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: .45; } }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  z-index: 50;
+  padding: 10px 16px; max-width: 90vw;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: var(--shadow); font-size: 13px;
+}
+
+/* ── Batch assess ─────────────────────────────────────────────────── */
+.assess-batch { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; }
+.assess-batch label { font-size: 12px; color: var(--muted); }
+.assess-n { width: 58px; }
+
+/* Naming the run by hand. Wide enough for a handful of tickers without becoming
+   the widest thing in the toolbar; it scrolls rather than wraps, because a
+   control that grows a line as you type shifts everything beside it. */
+.assess-symbols { width: 132px; font-family: var(--mono); font-size: 12px; }
+.assess-or { font-size: 12px; color: var(--muted); }
+/* The button relabels itself with a count, so its width moves; nowrap keeps it
+   one line at every label rather than folding at the widest one. */
+.assess-batch .btn, .assess-skip { white-space: nowrap; }
+
+/* ── The assessment queue ──────────────────────────────────────────────
+   Takes the full width of the toolbar's wrapped row: the chips are the answer
+   to "which", and truncating them to fit beside the controls would leave the
+   question half answered. */
+.assess-queue {
+  flex-basis: 100%;
+  display: flex; align-items: center; gap: 8px;
+  padding-top: 2px;
+}
+.assess-queue-label {
+  color: var(--text-muted); font-size: 11px; font-weight: 650;
+  letter-spacing: .03em; text-transform: uppercase;
+}
+/* Scrolls rather than wrapping. A hundred chips wrapping would push the board
+   itself off screen; one scrolling row keeps the toolbar a fixed height however
+   long the queue gets. */
+.assess-queue-chips {
+  display: flex; align-items: center; gap: 5px;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.queue-chip {
+  display: inline-flex; align-items: center; gap: 4px; flex: none;
+  padding: 2px 3px 2px 5px; border-radius: 5px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  font: 600 11.5px/1.4 var(--mono);
+  white-space: nowrap;
+}
+/* The run order, which is the click order, which is a choice the user made. */
+.queue-chip-n {
+  color: var(--text-muted); font-weight: 400; font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+/* A queued name the board no longer holds. Marked rather than dropped on
+   sight — a chip that vanishes by itself explains nothing. */
+.queue-chip-gone { border-color: var(--warn); color: var(--warn); }
+
+/* The one in flight, at the head of the bar. Filled, matching its row button,
+   and with no × — the call is sent, so there is nothing to take back. */
+.queue-chip-live {
+  padding-right: 7px;
+  background: var(--accent); border-color: var(--accent); color: var(--bg);
+}
+.queue-chip-live .queue-chip-n { color: var(--bg); opacity: .75; }
+
+.queue-chip-x {
+  padding: 0 3px; border: none; border-radius: 3px; background: none;
+  color: var(--text-muted); font-size: 13px; line-height: 1; cursor: pointer;
+}
+.queue-chip-x:hover { background: var(--border); color: var(--down); }
+
+.assess-queue-cost {
+  margin-left: auto; flex: none;
+  color: var(--text-muted); font-size: 11.5px;
+  font-variant-numeric: tabular-nums; cursor: help;
+}
+
+/* ── Recent analyses ───────────────────────────────────────────────────
+   The way back to a brief. Same shape as the queue bar so the two read as one
+   strip of state, and scrolling for the same reason. */
+.assess-recent-chips {
+  display: flex; align-items: center; gap: 5px;
+  overflow-x: auto; padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.recent-chip {
+  display: inline-flex; align-items: baseline; gap: 6px; flex: none;
+  padding: 2px 8px; border-radius: 5px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text); font: 11.5px/1.5 var(--mono);
+  white-space: nowrap; cursor: pointer;
+}
+.recent-chip:hover { border-color: var(--accent); background: var(--surface); }
+.recent-chip-sym { font-weight: 700; }
+/* The rating, weakly. It is the field with no external evidence behind it (see
+   the Assessed column header) and a strip of bold numbers would lend it a
+   confidence the column beside it goes out of its way not to. */
+.recent-chip-score { color: var(--text-muted); }
+.recent-chip-age { color: var(--text-muted); font-size: 10px; }
+
+/* Assessed, then removed from the board: the analysis still exists in the log,
+   but there is no row to open, so the chip stays and stops being a button. */
+.recent-chip-gone { opacity: .5; cursor: default; }
+.recent-chip-gone:hover { border-color: var(--border); background: var(--surface-2); }
+/* Sits with the batch controls because it only ever affects a batch — a row
+   click is never skipped, however recently that name was assessed. */
+.assess-skip { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.assess-skip input { cursor: pointer; margin: 0; }
+.btn-stop { border-color: var(--down); color: var(--down); }
+.assess-progress { font-variant-numeric: tabular-nums; min-width: 12ch; }
+
+/* ── Which price regime a number came from ────────────────────────────
+   Shown only when a row is NOT the close-to-close default: a tag on every row
+   is noise within a day and trains the eye to skip it. `mix` is the loud one —
+   a mixed window is neither quantity and should not be compared with either. */
+.px-basis {
+  margin-left: 4px; padding: 0 3px; border-radius: 3px;
+  font-size: 9.5px; font-weight: 650; letter-spacing: .04em;
+  text-transform: uppercase; cursor: help; vertical-align: 1px;
+}
+.px-basis-intra {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+}
+.px-basis-mixed {
+  background: color-mix(in srgb, var(--warn, #d19a4c) 26%, transparent);
+  color: var(--warn, #d19a4c);
+}
+
+/* ── The directional fields, one section each ─────────────────────────
+   Each field gets a titled section rather than a tab, because they are scored
+   on different horizons and a tab would invite reading one number as if it
+   answered the others' question. */
+.rt-field { margin: 28px 0 0; }
+.rt-field-h {
+  margin: 0 0 10px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px; letter-spacing: .01em;
+}
+/* A horizon that cannot report yet. Deliberately NOT shaped like a table —
+   an empty table reads as a measured result whose cells happen to be blank. */
+.rt-pending {
+  padding: 12px 14px; border-radius: 8px;
+  border: 1px dashed var(--border); background: var(--surface-2);
+}
+.rt-pending p { margin: 0 0 8px; }
+.rt-pending p:last-child { margin-bottom: 0; }
+.rt-caveat {
+  margin-top: 10px; padding: 8px 10px; border-radius: 6px;
+  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+  font-size: 12px; color: var(--text-muted);
+}
+
+/* ── Rating: shown large, hedged loudly. The size is the judgment, the
+      block beside it is what the judgment is worth. ─────────────────── */
+.brief-rating {
+  display: flex; gap: 14px; align-items: flex-start;
+  margin: 14px 0; padding: 12px 14px;
+  border: 1px solid var(--border); border-left: 3px solid var(--warn);
+  border-radius: 8px; background: var(--surface-2, rgba(127,127,127,.06));
+}
+.brief-rating-n { font-size: 30px; font-weight: 650; line-height: 1; font-variant-numeric: tabular-nums; }
+.brief-rating-d { font-size: 14px; font-weight: 400; color: var(--muted); }
+.brief-rating-body { flex: 1; min-width: 0; }
+.brief-rating-basis { margin: 0 0 6px; }
+.brief-rating-warn { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ── The verdict ────────────────────────────────────────────────────
+   The rating, the two calls and the entry level, as one anchor rather than
+   three bordered paragraphs in reading order. This is the panel's output and
+   the most distinctive thing in the app; everything around it is reference. */
+.verdict {
+  display: flex; flex-direction: column; gap: 0;
+  margin: 4px 0 20px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.verdict > .brief-rating,
+.verdict > .brief-calls {
+  margin: 0; border: none; border-radius: 0; background: none;
+}
+.verdict > .brief-rating { border-bottom: 1px solid var(--border); }
+
+/* The figures carry the weight. Mono, because they are quantities, and large
+   enough that the panel has an obvious entry point. */
+.brief-rating-n, .brief-call-n {
+  font-family: var(--mono); font-variant-numeric: tabular-nums;
+}
+.brief-rating-label { margin: 0 0 4px; font-size: 12.5px; font-weight: 650; }
+
+/* ── The caveat ─────────────────────────────────────────────────────
+   Closed, never hidden. The chip is loud on purpose: this text is the only
+   thing between a reader and treating the rating as a signal. */
+.brief-caveat { margin-top: 8px; }
+.brief-caveat > summary {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; list-style: none;
+  font-size: 12px; color: var(--text-muted);
+}
+.brief-caveat > summary::-webkit-details-marker { display: none; }
+.brief-caveat > summary::after { content: "\25BE"; opacity: .7; }
+.brief-caveat[open] > summary::after { content: "\25B4"; }
+.brief-caveat-lead { text-decoration: underline dotted; text-underline-offset: 3px; }
+.status-loud {
+  background: color-mix(in srgb, var(--down) 22%, transparent);
+  border: 1px solid var(--down); color: var(--down);
+  font-weight: 700; margin-left: 0;
+}
+.brief-caveat .brief-rating-warn { margin-top: 8px; }
+
+/* ── Snapshot groups ────────────────────────────────────────────────
+   Scores and raw readings are different kinds of number and no longer share
+   one list — see the note in technicalDetailHTML. */
+.snap-group + .snap-group { margin-top: 16px; }
+.snap-head {
+  margin: 0 0 6px; font-size: 10.5px; font-weight: 650;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted);
+  padding-bottom: 5px; border-bottom: 1px solid var(--border);
+}
+
+/* ── The horizon split ──────────────────────────────────────────────
+   One container for both calls and the entry level, set apart from the rating
+   above it without borrowing its warning border: the rating's border is red
+   because that field carries STATUS.UNSUPPORTED, and reusing it here would
+   assert the same finding about fields nothing has measured either way. */
+.brief-calls {
+  margin: 14px 0; padding: 12px 14px;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border-radius: 8px; background: var(--surface-2, rgba(127,127,127,.06));
+}
+.brief-calls-head { margin: 0 0 10px; font-size: 13px; font-weight: 650; }
+
+.brief-call { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 10px; }
+.brief-call-n {
+  font-size: 24px; font-weight: 650; line-height: 1.1;
+  font-variant-numeric: tabular-nums; min-width: 46px;
+}
+.brief-call-d { font-size: 12px; font-weight: 400; color: var(--muted); }
+.brief-call-body { flex: 1; min-width: 0; }
+.brief-call-body h5 { margin: 0 0 3px; font-size: 12.5px; font-weight: 650; }
+.brief-call-body p { margin: 0; font-size: 12.5px; line-height: 1.55; }
+.brief-call-horizon { font-weight: 400; color: var(--muted); }
+
+.brief-entry { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--border); }
+.brief-entry h5 { margin: 0 0 3px; font-size: 12.5px; font-weight: 650; }
+.brief-entry p { margin: 0; font-size: 12.5px; line-height: 1.55; }
+.brief-entry-n { font-variant-numeric: tabular-nums; }
+.brief-entry-pct { font-weight: 400; color: var(--muted); }
+/* A refusal is a fact about the model, not an error state — muted, not red. */
+.brief-entry-rejected h5 { color: var(--muted); }
+.brief-entry-rejected p { color: var(--muted); font-size: 12px; }
+/* What the model meant, kept visible through a refusal of what it said. */
+.brief-entry-declared { color: var(--text) !important; margin: 0 0 6px !important; }
+
+/* The refused line itself, quoted so the rejection can be checked against it. */
+.brief-entry-quoted {
+  margin: 4px 0 6px !important; padding: 6px 9px;
+  border-left: 2px solid var(--border); border-radius: 0 5px 5px 0;
+  background: var(--surface-2, rgba(127,127,127,.06));
+  font-style: italic;
+}
+
+.brief-calls-note { margin: 10px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+.status-unsupported { background: var(--down); color: #fff; }
+.status-dot.status-unsupported { background: var(--down); }
+
+/* ── Rating harness ───────────────────────────────────────────────── */
+.rt-warn {
+  margin: 0 0 12px; padding: 10px 12px; font-size: 13px; line-height: 1.55;
+  border: 1px solid var(--down); border-radius: 8px;
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+}
+.rt-horizon { margin: 0 0 26px; }
+.rt-horizon h3 { margin: 0 0 8px; font-size: 15px; }
+.rt-se { font-size: 11px; color: var(--muted); font-weight: 400; }
+.rt-thin { color: var(--down); }
+.rt-warnline { color: var(--down); }
+.rt-verdict { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; }
+.rt-inside { color: var(--muted); }
+.rt-outside { color: var(--fg); }
+.rt-rho { margin: 6px 0 0; font-size: 12.5px; }
+
+.brief-stale, .rt-stale {
+  margin: 10px 0; padding: 9px 12px; font-size: 12.5px; line-height: 1.55;
+  border: 1px solid var(--warn, #b8860b); border-radius: 8px;
+  background: color-mix(in srgb, var(--warn, #b8860b) 10%, transparent);
+}
+.fx-withheld { color: var(--down); font-size: 11px; }
+.fx-unverified {
+  margin-left: 3px; font-weight: 600; color: var(--muted); cursor: help;
+}
+.fx-note-unverified { border-left: 2px solid var(--muted); padding-left: 8px; }
+.insider-officer, .insider-holder, .insider-unknown { white-space: nowrap; cursor: help; }
+.insider-holder, .insider-unknown { margin-left: 5px; opacity: .75; }
+.insider-holder sub, .insider-unknown sub { font-size: 9px; color: var(--muted); }
+.sector-peer { color: var(--muted); font-size: 11px; cursor: help; }
+.rt-diagnostics {
+  margin: 0 0 18px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-2, rgba(127,127,127,.05));
+}
+.rt-diagnostics h3 { margin: 0 0 10px; font-size: 14px; }
+.rt-diag-row { display: grid; grid-template-columns: 190px 190px 1fr; gap: 10px;
+  padding: 6px 0; border-top: 1px solid var(--border); font-size: 12.5px; align-items: baseline; }
+.rt-diag-row:first-of-type { border-top: 0; }
+.rt-diag-label { color: var(--muted); }
+.rt-diag-value { font-variant-numeric: tabular-nums; }
+.rt-diag-note { color: var(--muted); line-height: 1.5; }
+@media (max-width: 700px) { .rt-diag-row { grid-template-columns: 1fr; gap: 2px; } }
+.rt-control { margin-bottom: 14px; }
+.rt-split { color: var(--muted); font-weight: 400; font-size: 11px; }
+.rt-ctl-tag { font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; margin-left: 5px; }
+.rt-sub { margin: 16px 0 6px; font-size: 13px; font-weight: 600; }
+
+/* Static mode (GitHub Pages, no serve.mjs). detectServer() stamps
+   data-server="static" on <html>; the proxied-only controls go with it. */
+html[data-server="static"] .proxy-only,
+html[data-server="static"] #board-body [data-assess] { display: none !important; }
+
+/* Snapshot label: one line above the board, stated rather than warned. Accent
+   tag, not --warn — nothing is wrong, it is simply a dated copy. */
+.snapshot-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin: 0 0 12px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-2); font-size: 13px;
+}
+.snapshot-bar[hidden] { display: none; }
+.snapshot-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 6px;
+}
+.snapshot-text { flex: 1 1 320px; color: var(--text-muted); }
+.snapshot-text strong { color: var(--text); font-weight: 600; }

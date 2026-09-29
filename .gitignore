@@ -1,0 +1,35 @@
+# Private working notes — kept local on purpose
+CLAUDE.md
+docs/NOTES.md
+.claude/
+
+# Local state written by serve.mjs (daily Anthropic spend ledger)
+.anthropic-spend.json
+
+# Secrets, in case one is ever put in a file
+.env
+.env.*
+*.key
+
+# Exported assessment logs (Export log button) — personal data
+bolt-assessments-*.json
+# Raw storage dumps (tools/export-dump.js) — private; only data/snapshot/ is published
+bolt-dump-*.json
+dump*.json
+
+# Node (e2e/ has its own package.json; the app itself has no dependencies)
+node_modules/
+npm-debug.log*
+
+# Playwright output — regenerated on every run
+e2e/test-results/
+e2e/report/
+e2e/screenshots/
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.log
