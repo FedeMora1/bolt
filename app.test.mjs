@@ -5708,3 +5708,32 @@ test('snapshot: share-count age is judged at the snapshot date, not today', () =
   const ageDays = (s.run('Date.now()') - Date.parse(`${sharesEnd}T00:00:00Z`)) / 86_400_000;
   assert.ok(ageDays <= s.SHARES_MAX_AGE_DAYS, `age ${ageDays.toFixed(1)}d must be under the gate at the snapshot`);
 });
+
+/* The snapshot's status line is for a visitor: shown and scored, nothing else.
+   The local line carries maintenance counts (names beyond the momentum and MA
+   edges, single-bar flags, the cohort), which a visitor has no use for and which
+   made the line long enough to run off the edge of the card. */
+test('snapshot: the board status line is shown and scored only', () => {
+  const s = loadApp();
+  const closes = Array.from({ length: 300 }, (_, i) => 100 + i * 0.3);
+  const scored = s.technicalsFor({ f: '2024-01-01', t: '2026-01-01', c: closes });
+  const rows = [
+    { ...scored, symbol: 'ZZFA', mom6m1m: 95, maGap: 70, pxAnomaly: true },
+    { ...scored, symbol: 'ZZFB' },
+    { symbol: 'ZZFC' },
+  ];
+  s.state.boardMode = 'technicals';
+  for (const r of rows) s.state.rows.set(r.symbol, r);
+  s.state.symbolSet = new Set(rows.map((r) => r.symbol));
+  const parts = () => s.run('boardMetaParts')(3);
+
+  const local = parts();
+  assert.ok(local.some((p) => /beyond ±\d+% momentum/.test(p)), `local keeps its diagnostics: ${local}`);
+  assert.ok(local.some((p) => /single bar/.test(p)), `local keeps its diagnostics: ${local}`);
+
+  s.state.snapshot = { asOf: Date.parse('2026-09-20T12:00:00Z'), entries: {}, assessments: [] };
+  const snap = parts();
+  assert.equal(snap.length, 2, `snapshot line: ${snap.join(' · ')}`);
+  assert.equal(snap[0], '3 shown');
+  assert.match(snap[1], /^2 scored /);
+});

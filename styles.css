@@ -350,13 +350,19 @@ main {
 
 .card-head h2 { margin: 0; font-size: 14px; font-weight: 650; }
 
-/* `flex-shrink: 0` and no wrapping. With neither, a head carrying a lot of
-   controls — the backtest's, most of all — squeezed this line into a column one
-   word wide running down the side of the card. It wraps to its own row now
-   instead, which is what the flex-wrap above is for. */
+/* `flex-shrink: 0`. Without it, a head carrying a lot of controls — the
+   backtest's, most of all — squeezed this line into a column one word wide
+   running down the side of the card. It moves to its own row instead, which is
+   what the flex-wrap above is for.
+
+   It used to be `nowrap` too, which ran a long line (the board's status line)
+   off the right edge once it was alone on its row. `max-width: 100%` caps it
+   at the row, and the text wraps inside that. It never shrinks beside the
+   controls, because shrink is still off: too long to sit beside them, it takes
+   a row of its own first. */
 .card-head .muted {
   margin: 0 0 0 auto; font-size: 12px;
-  white-space: nowrap; flex-shrink: 0;
+  flex-shrink: 0; max-width: 100%;
 }
 
 .select {
@@ -575,7 +581,7 @@ th.col-failed, td.col-failed { opacity: .55; }
    sized for one — a button that reads "Assess / top…" looks like a rendering
    fault rather than a full toolbar. Wrapping moves the overflow to a second
    line and leaves every label intact. */
-.assess-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; row-gap: 6px; }
+.assess-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; row-gap: 6px; min-width: 0; }
 .assess-model-label {
   color: var(--text-muted); font-size: 11px; font-weight: 650;
   letter-spacing: .03em; text-transform: uppercase;
@@ -1329,8 +1335,11 @@ thead .col-active { color: var(--accent); font-weight: 700; }
    Takes the full width of the toolbar's wrapped row: the chips are the answer
    to "which", and truncating them to fit beside the controls would leave the
    question half answered. */
+/* `min-width: 0` here and on the chip strips: a flex item is otherwise never
+   narrower than its content, so the strip ran past the card's edge instead of
+   scrolling. */
 .assess-queue {
-  flex-basis: 100%;
+  flex-basis: 100%; min-width: 0;
   display: flex; align-items: center; gap: 8px;
   padding-top: 2px;
 }
@@ -1342,7 +1351,7 @@ thead .col-active { color: var(--accent); font-weight: 700; }
    itself off screen; one scrolling row keeps the toolbar a fixed height however
    long the queue gets. */
 .assess-queue-chips {
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 5px; min-width: 0;
   overflow-x: auto; padding-bottom: 2px;
   scrollbar-width: thin;
 }
@@ -1387,7 +1396,7 @@ thead .col-active { color: var(--accent); font-weight: 700; }
    The way back to a brief. Same shape as the queue bar so the two read as one
    strip of state, and scrolling for the same reason. */
 .assess-recent-chips {
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: 5px; min-width: 0;
   overflow-x: auto; padding-bottom: 2px;
   scrollbar-width: thin;
 }
@@ -1628,6 +1637,13 @@ thead .col-active { color: var(--accent); font-weight: 700; }
    data-server="static" on <html>; the proxied-only controls go with it. */
 html[data-server="static"] .proxy-only,
 html[data-server="static"] #board-body [data-assess] { display: none !important; }
+
+/* Snapshot mode. loadSnapshot() stamps data-snapshot on <html>. A visitor is
+   only looking, so nothing that edits the board or the log is offered: no Data
+   menu, no log export or import, no per-row remove. "Use live data" stays. */
+html[data-snapshot] #data-menu,
+html[data-snapshot] .assess-io,
+html[data-snapshot] .remove-col { display: none !important; }
 
 /* Snapshot label: one line above the board, stated rather than warned. Accent
    tag, not --warn — nothing is wrong, it is simply a dated copy. */

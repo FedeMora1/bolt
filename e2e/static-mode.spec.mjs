@@ -130,6 +130,30 @@ test('snapshot: first visit shows a working board with no key', async ({ page })
   expect(stats.analyst).toBeGreaterThan(500);
   expect(stats.mom12).toBeGreaterThan(500);
   expect(stats.accruals).toBeGreaterThan(500);
+
+  // Read-only: nothing that edits the board or the log, but the way to live data stays.
+  await expect(page.locator('html')).toHaveAttribute('data-snapshot', 'true');
+  await expect(page.locator('#data-menu')).toBeHidden();
+  await expect(page.locator('#assess-export')).toBeHidden();
+  await expect(page.locator('#assess-import')).toBeHidden();
+  await expect(page.locator('#board-body .row-remove').first()).toBeHidden();
+  await expect(page.locator('#board-head .remove-col')).toBeHidden();
+  await expect(page.locator('#snapshot-live')).toBeVisible();
+
+  // The status line: shown and scored only, and inside the card at any width.
+  await expect(page.locator('#board-meta')).toHaveText(/^\d+ shown · \d+ scored [^·]+$/);
+  for (const width of [1440, 900, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const over = await page.locator('#board-meta').evaluate((el) =>
+      el.getBoundingClientRect().right - el.closest('.card-head').getBoundingClientRect().right);
+    expect(over, `status line overflows the card at ${width}px`).toBeLessThanOrEqual(0);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // The Recent strip scrolls inside the card rather than running past it.
+  await expect(page.locator('#assess-recent')).toBeVisible();
+  const recentOver = await page.locator('#assess-recent').evaluate((el) =>
+    el.getBoundingClientRect().right - document.querySelector('#board').getBoundingClientRect().right);
+  expect(recentOver, 'the Recent strip runs past the card').toBeLessThanOrEqual(0);
   await shot(page, 'snapshot-01-board.png');
 
   // A detail panel on a real name: price chart from the stored series.
@@ -218,6 +242,9 @@ test('static mode: Use live data → key → live board → detail panel (mocked
   await page.locator('#key-gate').evaluate((el) => { el.hidden = true; });   // as clicking Key would
   for (const s of TICKERS) await expect(page.locator(`#board-body tr[data-symbol="${s}"]`)).toBeAttached();
   await expect(page.locator('#board-body [data-assess]').first()).toBeHidden();
+  // Live data is the visitor's own board again: removing a row is back.
+  await expect(page.locator('html')).not.toHaveAttribute('data-snapshot', /.*/);
+  await expect(page.locator('#board-body .row-remove').first()).toBeVisible();
   const pct = await page.evaluate(() => [...state.rows.values()].filter((r) => r.analystPct != null).length);
   expect(pct, 'every name gets an analyst percentile once the cohort is large enough').toBe(TICKERS.length);
   await shot(page, '03-board-loaded.png');

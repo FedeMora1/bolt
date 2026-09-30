@@ -9336,9 +9336,22 @@ function coverageNote(dom, rows) {
   return `${scored} scored ${plainLabel(head.label)}`;
 }
 
-function renderBoardMeta(count) {
-  const shown = count ?? sortedRows().length;
+/** The board's status line, as its parts. Split out of renderBoardMeta so the
+    snapshot's shorter line is testable.
+
+    A snapshot visitor is only looking, so they get what the board is: how many
+    names are shown and how many scored. The diagnostic counts below are for
+    whoever maintains the data, and stay on the local board. */
+function boardMetaParts(shown) {
   const parts = [`${shown} shown`];
+
+  if (state.snapshot) {
+    const dom = domain(state.boardMode);
+    if (dom.needsPrices) {
+      parts.push(coverageNote(dom, [...state.rows.values()].filter((r) => state.symbolSet.has(r.symbol))));
+    }
+    return parts;
+  }
 
   /* Whatever the section's own controls excluded, described by the control
      itself — so a domain that adds one gets its count reported for free. */
@@ -9398,7 +9411,11 @@ function renderBoardMeta(count) {
   }
   if (state.dropped) parts.push(`${state.dropped} dropped (no coverage)`);
   if (!state.loading && state.rows.size) parts.push(`updated ${new Date().toLocaleTimeString()}`);
-  $('#board-meta').textContent = parts.join(' · ');
+  return parts;
+}
+
+function renderBoardMeta(count) {
+  $('#board-meta').textContent = boardMetaParts(count ?? sortedRows().length).join(' · ');
 }
 
 // ── Rendering: board ────────────────────────────────────────────────
@@ -9746,7 +9763,7 @@ function assessedCellHTML(r) {
 }
 
 const removeCellHTML = (r) =>
-  `<td class="action-col"><button class="row-remove" data-remove="${esc(r.symbol)}" title="Remove ${esc(r.symbol)}" aria-label="Remove ${esc(r.symbol)}">&times;</button></td>`;
+  `<td class="action-col remove-col"><button class="row-remove" data-remove="${esc(r.symbol)}" title="Remove ${esc(r.symbol)}" aria-label="Remove ${esc(r.symbol)}">&times;</button></td>`;
 
 /** The bar-count cell, shared by every price-driven domain.
 
@@ -9873,7 +9890,7 @@ function renderBoardHead() {
       return `<th class="num assessed-col assessed-head" scope="col" title="${esc(col.title)}"><span class="saturated">${esc(col.label)}</span></th>`;
     }
     if (col.special === 'assess') return '<th class="action-col" scope="col"><span class="sr-only">Assess</span></th>';
-    if (col.special === 'remove') return '<th class="action-col" scope="col"><span class="sr-only">Remove</span></th>';
+    if (col.special === 'remove') return '<th class="action-col remove-col" scope="col"><span class="sr-only">Remove</span></th>';
 
     // A failed domain's column renders as a reading, not as a control: no
     // sortable class and no data-sort, so the click handler never sees it.
@@ -13229,6 +13246,10 @@ async function loadSnapshot() {
 
   installSnapshotClock(core.asOf);
   state.snapshot = { asOf: core.asOf, entries: core.entries, assessments: [] };
+  /* Read-only from here: the CSS hides everything that edits the board or the
+     log off this attribute. "Use live data" reloads the page, so it is never
+     taken off again. */
+  document.documentElement.dataset.snapshot = 'true';
   Object.assign(PLAN, core.plan || {});
   if (core.sec) state.sec = { at: core.sec.at || 0, cik: core.sec.cik || {}, gone: core.sec.gone || [] };
   state.symbols = core.watchlist.filter((s) => core.entries[s]);
