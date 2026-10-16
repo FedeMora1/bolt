@@ -1,10 +1,19 @@
 # Bolt: A Multi-Factor Stock Screener
 
-**Live app:** https://FedeMora1.github.io/bolt/
+Bolt ranks 579 U.S. stocks three independent ways (Wall Street analyst ratings, price trends, and company financials) and then tests whether its own rankings actually predict returns. Built by Federico Mora.
 
-![Bolt ranking board](docs/screenshot.png)
+### ▶ [Open the live app](https://FedeMora1.github.io/bolt/) (no setup needed)
 
-Bolt is a multi-factor stock screener: it scores 579 U.S.-listed stocks three independent ways, shows how much evidence stands behind each score, and tests its own scores. I built it to research swing-trade ideas and picks for my school's student-led investment fund.
+![Bolt demo: the ranking board, a stock's score breakdown, and the backtest](docs/demo.gif)
+
+## At a glance
+
+- **Three independent scores.** Every stock is scored on analyst consensus, price momentum and volatility, and fundamentals from SEC filings, then combined into one ranking. Each stock's detail panel shows exactly how its score was calculated.
+- **It tests itself.** A built-in backtest scores stocks using only data available on past dates and measures what the top and bottom groups returned afterward against the S&P 500.
+- **The honest result so far:** no score has yet been shown to predict returns. The tests and their limits are laid out in [Is it accurate?](#is-it-accurate)
+- **The lesson that shaped it:** an early version ranked a Hold-rated stock #1 with an impossible score. Catching that led to the current design, where no single signal can override the analysts' actual opinion. More in [What I learned](#what-i-learned).
+
+I built it to research swing-trade ideas and picks for my school's student-led investment fund. It has more than 300 automated tests, and the live version runs in any browser with no setup.
 
 ## What's in it
 
