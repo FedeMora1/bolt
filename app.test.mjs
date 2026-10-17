@@ -5709,6 +5709,51 @@ test('snapshot: share-count age is judged at the snapshot date, not today', () =
   assert.ok(ageDays <= s.SHARES_MAX_AGE_DAYS, `age ${ageDays.toFixed(1)}d must be under the gate at the snapshot`);
 });
 
+/* The banner states each part's own date. The September snapshot was dated by
+   its newest quote while half its quotes were twelve days older and its price
+   history three weeks older, and the banner said none of it. */
+test('snapshot banner: each part is dated, and anything older than the snapshot is named', () => {
+  const s = loadApp();
+  const asOf = Date.parse('2026-10-17T03:55:00Z');   // Friday evening in New York
+  const through = {
+    quotes: { from: Date.parse('2026-10-16T21:00:00Z'), to: asOf },
+    trends: { from: Date.parse('2026-10-16T18:00:00Z'), to: Date.parse('2026-10-17T03:00:00Z') },
+    prices: { to: '2026-10-15', behind: 20 },
+    fundamentals: { from: Date.parse('2026-10-16T19:00:00Z'), to: Date.parse('2026-10-16T19:30:00Z') },
+    assessments: { from: Date.parse('2026-09-01T15:00:00Z'), to: Date.parse('2026-09-04T22:00:00Z') },
+  };
+  const f = s.run('snapshotFreshness')(through, asOf);
+  assert.equal(f.day, '2026-10-16', 'the snapshot day is the market\'s (New York) day, not UTC\'s 17th');
+  const by = Object.fromEntries(f.items.map((i) => [i.label, i]));
+  assert.equal(by.Prices.text, 'as of the close on Oct 16');
+  assert.equal(by.Prices.older, false, 'quotes taken that evening, UTC 03:55 included, are the same market day');
+
+  // Taken after midnight into Saturday: still Friday's session, and Friday's prices are not "older".
+  const sat = Date.parse('2026-10-17T04:25:00Z');
+  const late = s.run('snapshotFreshness')({ ...through, quotes: { from: through.quotes.from, to: sat } }, sat);
+  assert.equal(late.day, '2026-10-16', 'a Saturday 00:25 snapshot is dated by Friday\'s session');
+  assert.equal(late.items.find((i) => i.label === 'Prices').text, 'as of the close on Oct 16');
+  assert.ok(!late.older.includes('Prices'));
+  assert.equal(s.run('sessionDay')(Date.parse('2026-10-19T12:00:00Z')), '2026-10-16', 'Monday 08:00 New York, before the open, is Friday');
+  assert.equal(s.run('sessionDay')(Date.parse('2026-10-19T14:00:00Z')), '2026-10-19', 'Monday 10:00 is Monday');
+  assert.equal(by['Price history'].text, 'through Oct 15 (20 stocks end earlier)');
+  assert.equal(by['AI ratings'].text, 'written Sep 1–4');
+  assert.deepEqual([...f.older], ['Price history', 'AI ratings']);
+
+  // A part with an old tail is older even when its newest fetch is current.
+  const mixed = s.run('snapshotFreshness')({ ...through, quotes: { from: Date.parse('2026-09-15T14:00:00Z'), to: asOf } }, asOf);
+  assert.equal(mixed.items.find((i) => i.label === 'Prices').text, 'as of the close on Sep 15 – Oct 16');
+  assert.ok(mixed.older.includes('Prices'));
+});
+
+test('snapshot banner: a snapshot built before `through` existed shows its date alone', () => {
+  const s = loadApp();
+  const f = s.run('snapshotFreshness')(null, Date.parse('2026-09-28T03:55:04Z'));
+  assert.equal(f.day, '2026-09-25', 'Sunday evening in New York holds Friday\'s closes');
+  assert.equal(f.items.length, 0);
+  assert.equal(f.older.length, 0);
+});
+
 /* The snapshot's status line is for a visitor: shown and scored, nothing else.
    The local line carries maintenance counts (names beyond the momentum and MA
    edges, single-bar flags, the cohort), which a visitor has no use for and which

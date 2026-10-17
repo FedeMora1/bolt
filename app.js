@@ -13245,7 +13245,7 @@ async function loadSnapshot() {
   if (!core || core.format !== 'bolt.snapshot' || !core.entries || !Array.isArray(core.watchlist)) return false;
 
   installSnapshotClock(core.asOf);
-  state.snapshot = { asOf: core.asOf, entries: core.entries, assessments: [] };
+  state.snapshot = { asOf: core.asOf, entries: core.entries, assessments: [], through: core.through || null };
   /* Read-only from here: the CSS hides everything that edits the board or the
      log off this attribute. "Use live data" reloads the page, so it is never
      taken off again. */
@@ -13287,15 +13287,107 @@ async function loadSnapshot() {
   return true;
 }
 
-/** The snapshot's label. Stated once, plainly, where the board starts — a date
-    and a route to live data, not an apology. */
+/** A moment's date on the market's calendar (New York), as YYYY-MM-DD.
+
+    Not the viewer's calendar: a snapshot taken on a Friday evening in New York
+    is already Saturday in UTC and later, and a banner dated the 17th above
+    prices that close on the 16th reads as a contradiction. */
+const marketDay = (ms) => new Intl.DateTimeFormat('en-CA',
+  { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms);
+
+/** The trading session a quote taken at `ms` belongs to, as YYYY-MM-DD.
+
+    A quote taken on a weekend, or on a weekday before the 9:30 open, is the
+    previous session's close: the October snapshot was taken at 00:25 on a
+    Saturday in New York and holds Friday's closes. Dating by calendar day put
+    "October 17" on the banner and called Friday's prices older than it.
+    Exchange holidays are not modelled; a quote taken on one dates to it. */
+function sessionDay(ms) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short',
+  }).formatToParts(ms).map((p) => [p.type, p.value]));
+  const d = new Date(Date.UTC(+parts.year, +parts.month - 1, +parts.day));
+  if (+parts.hour * 60 + +parts.minute < 9 * 60 + 30) d.setUTCDate(d.getUTCDate() - 1);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "Oct 15", or "Sep 1–4" / "Sep 15 – Oct 16" for a span of market days. */
+function shortDays(fromDay, toDay = fromDay) {
+  const fmt = (d, opts) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', ...opts });
+  if (fromDay === toDay) return fmt(fromDay, { month: 'short', day: 'numeric' });
+  if (fromDay.slice(0, 7) === toDay.slice(0, 7)) return `${fmt(fromDay, { month: 'short', day: 'numeric' })}–${fmt(toDay, { day: 'numeric' })}`;
+  return `${fmt(fromDay, { month: 'short', day: 'numeric' })} – ${fmt(toDay, { month: 'short', day: 'numeric' })}`;
+}
+
+/** What the snapshot's parts are current through, against its own date.
+
+    The date on the banner is the newest quote; on its own it claimed more than
+    the data held. The September snapshot carried that date while 232 quotes
+    were twelve days older and the price history ended three weeks earlier, so
+    every part is stated with its own date and anything older than the
+    snapshot's day is flagged `older`. Older is not wrong — the assessment log
+    is history by design — but a visitor should not have to infer it.
+
+    `through` comes from build-snapshot.mjs; a snapshot built before it existed
+    has none, and the banner keeps its date alone rather than guessing. */
+function snapshotFreshness(through, asOf) {
+  const day = sessionDay(asOf);
+  if (!through) return { day, items: [], older: [] };
+  const items = [];
+  // Prices are dated by the session they close; fetches and write-ups by the calendar day.
+  const span = (s, label, verb, toDay = marketDay) => {
+    if (!s) return;
+    const from = toDay(s.from);
+    const to = toDay(s.to);
+    items.push({ label, text: `${verb} ${shortDays(from, to)}`, older: from < day });
+  };
+  span(through.quotes, 'Prices', 'as of the close on', sessionDay);
+  if (through.prices) {
+    const n = through.prices.behind;
+    items.push({
+      label: 'Price history',
+      text: `through ${shortDays(through.prices.to)}${n ? ` (${n.toLocaleString()} ${n === 1 ? 'stock ends' : 'stocks end'} earlier)` : ''}`,
+      older: through.prices.to < day,
+    });
+  }
+  span(through.trends, 'Analyst ratings', 'checked');
+  span(through.fundamentals, 'Filings', 'checked');
+  span(through.assessments, 'AI ratings', 'written');
+  return { day, items, older: items.filter((i) => i.older).map((i) => i.label) };
+}
+
+/** The snapshot's label. Stated once, plainly, where the board starts — a date,
+    what each part is current through, and a route to live data. */
 function renderSnapshotBar() {
   const bar = $('#snapshot-bar');
   if (!bar || !state.snapshot) return;
-  const day = new Date(state.snapshot.asOf).toLocaleDateString(undefined,
-    { year: 'numeric', month: 'long', day: 'numeric' });
-  $('#snapshot-date').textContent = day;
+  const { day, items, older } = snapshotFreshness(state.snapshot.through, state.snapshot.asOf);
+  $('#snapshot-date').textContent = new Date(`${day}T12:00:00Z`).toLocaleDateString(undefined,
+    { timeZone: 'UTC', year: 'numeric', month: 'long', day: 'numeric' });
   $('#snapshot-count').textContent = state.symbols.length.toLocaleString();
+
+  const line = $('#snapshot-through');
+  if (line) {
+    line.replaceChildren();
+    items.forEach((item, i) => {
+      if (i) line.append(' · ');
+      const part = document.createElement('span');
+      if (item.older) part.className = 'snapshot-older';
+      const label = document.createElement('strong');
+      label.textContent = item.label;
+      part.append(label, ` ${item.text}`);
+      line.append(part);
+    });
+    if (older.length) {
+      const note = document.createElement('span');
+      note.className = 'snapshot-older-note';
+      note.textContent = `Older than the snapshot date: ${older.join(', ')}.`;
+      line.append(note);
+    }
+    line.hidden = !items.length;
+  }
   bar.hidden = false;
 }
 

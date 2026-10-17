@@ -116,6 +116,12 @@ test('snapshot: first visit shows a working board with no key', async ({ page })
   await expect(page.locator('html')).toHaveAttribute('data-server', 'static');
   await expect(page.locator('#snapshot-bar')).toBeVisible();
   await expect(page.locator('#snapshot-date')).not.toBeEmpty();
+  // Each part's own date, from core.json `through` — not only the snapshot's date.
+  await expect(page.locator('#snapshot-through')).toBeVisible();
+  await expect(page.locator('#snapshot-through')).toContainText('Prices');
+  await expect(page.locator('#snapshot-through')).toContainText('Price history');
+  console.log('snapshot banner:', await page.locator('#snapshot-date').textContent(), '|',
+    await page.locator('#snapshot-through').textContent());
   await expect(page.locator('#key-gate'), 'the key gate is an option, not the front door').toBeHidden();
 
   // Board: real companies, scored, once prices and fundamentals have streamed in.

@@ -61,28 +61,62 @@ export function buildSnapshot(dump) {
 
   const plan = JSON.parse(ls['bar.plan']);
   const sec = JSON.parse(ls['bar.sec']);
+  const series = Object.fromEntries(dump.px);
+
+  const cutoff = new Date(asOf - FX_KEEP_YEARS * 365.25 * 86_400_000).toISOString().slice(0, 10);
+  const facts = {};
+  for (const [symbol, rec] of dump.fx) facts[symbol] = trimFacts(rec, cutoff);
+
+  const assessed = dump.assessments.map(([, a]) => pick(a, ASSESS_FIELDS)).sort((a, b) => b.at - a.at);
+
   const core = {
     format: 'bolt.snapshot', v: 1,
     asOf, builtAt: Date.now(),
+    through: coverage({ entries, series, facts, assessments: assessed, gone: sec.gone }),
     watchlist: JSON.parse(ls['bar.watchlist']),
     entries,
     plan: { priceTarget: !!plan.priceTarget, insider: !!plan.insider, candle: !!plan.candle },
     sec: { at: sec.at, cik: sec.cik, gone: sec.gone },
   };
 
-  const prices = { format: 'bolt.snapshot.prices', v: 1, series: Object.fromEntries(dump.px) };
-
-  const cutoff = new Date(asOf - FX_KEEP_YEARS * 365.25 * 86_400_000).toISOString().slice(0, 10);
-  const facts = {};
-  for (const [symbol, rec] of dump.fx) facts[symbol] = trimFacts(rec, cutoff);
+  const prices = { format: 'bolt.snapshot.prices', v: 1, series };
   const fundamentals = { format: 'bolt.snapshot.fundamentals', v: 1, keepFrom: cutoff, facts };
-
-  const assessments = {
-    format: 'bolt.snapshot.assessments', v: 1,
-    entries: dump.assessments.map(([, a]) => pick(a, ASSESS_FIELDS)).sort((a, b) => b.at - a.at),
-  };
+  const assessments = { format: 'bolt.snapshot.assessments', v: 1, entries: assessed };
 
   return { core, prices, fundamentals, assessments };
+}
+
+/* What each part of the snapshot is current through, read from the data rather
+   than assumed from the build date. The September snapshot was dated by its
+   newest quote while 232 of its quotes were twelve days older and its price
+   history stopped three weeks short; nothing on the page said so. The banner
+   renders this from core.json, so it is there before the larger files arrive.
+
+   Spans are fetch times (ms) for quotes, analyst trends and filings, and write
+   times for assessments. Price history is a bar date: `to` is the date most
+   series end on, `behind` how many end before it.
+
+   Symbols SEC lists as gone (no longer registered) are left out of the filing
+   span and the price-history count: the app never refetches them, so their
+   last record is final rather than stale, and one of them (AVB, October) was
+   enough to mark every filing on the board as weeks old. */
+export function coverage({ entries, series, facts, assessments, gone = [] }) {
+  const live = ([symbol]) => !gone.includes(symbol);
+  const span = (xs) => {
+    const v = xs.filter((x) => typeof x === 'number' && x > 0);
+    return v.length ? { from: Math.min(...v), to: Math.max(...v) } : null;
+  };
+  const tracked = Object.entries(series).filter(live).map(([, s]) => s).filter((s) => s && s.t);
+  const ends = {};
+  for (const s of tracked) ends[s.t] = (ends[s.t] || 0) + 1;
+  const common = Object.entries(ends).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? 1 : -1))[0]?.[0] ?? null;
+  return {
+    quotes: span(Object.values(entries).map((e) => e.at)),
+    trends: span(Object.values(entries).map((e) => e.tAt)),
+    prices: common ? { to: common, behind: tracked.filter((s) => s.t < common).length } : null,
+    fundamentals: span(Object.entries(facts).filter(live).map(([, r]) => r.at)),
+    assessments: span(assessments.map((a) => a.at)),
+  };
 }
 
 /* Rows are newest-first. A row is kept if it ends inside the window OR is among

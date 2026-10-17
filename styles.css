@@ -1660,6 +1660,13 @@ html[data-snapshot] .remove-col { display: none !important; }
 }
 .snapshot-text { flex: 1 1 320px; color: var(--text-muted); }
 .snapshot-text strong { color: var(--text); font-weight: 600; }
+/* Own row under the date: each part's own "current through". Older parts are
+   marked by weight and a dotted underline, not a hue — colour means direction. */
+.snapshot-through { flex: 1 1 100%; color: var(--text-muted); font-size: 12.5px; line-height: 1.5; }
+.snapshot-through[hidden] { display: none; }
+.snapshot-through strong { color: var(--text); font-weight: 600; }
+.snapshot-older { text-decoration: underline dotted; text-underline-offset: 3px; }
+.snapshot-older-note { display: block; color: var(--text); font-weight: 600; }
 
 /* Credit line under the board: who built it and where the explanation lives. */
 .site-footer {

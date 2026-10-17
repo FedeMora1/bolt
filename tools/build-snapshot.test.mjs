@@ -44,6 +44,27 @@ test('the snapshot clock is the newest quote', () => {
   assert.equal(buildSnapshot(dump()).core.asOf, 1_790_000_000_000);
 });
 
+test('the snapshot records what each part is current through, from the data', () => {
+  const d = dump();
+  d.localStorage['bar.t.ZZAB'] = JSON.stringify({ at: 1_789_000_000_000, tAt: 1_788_000_000_000, q: [5], t: [] });
+  d.localStorage['bar.watchlist'] = JSON.stringify(['ZZAA', 'ZZAB']);
+  d.px.push(['ZZAB', { f: '2026-01-01', t: '2026-09-01', c: [1] }], ['ZZAC', { f: '2025-01-01', t: '2025-03-25', c: [1] }]);
+  const { through } = buildSnapshot(d).core;
+  assert.deepEqual(through.quotes, { from: 1_789_000_000_000, to: 1_790_000_000_000 }, 'the oldest quote is kept, not just the newest');
+  assert.deepEqual(through.trends, { from: 1_788_000_000_000, to: 1_788_000_000_000 }, 'entries with no trend fetch are skipped');
+  assert.deepEqual(through.prices, { to: '2026-09-01', behind: 1 }, 'the date most series end on, and how many stop earlier');
+  assert.deepEqual(through.fundamentals, { from: 1, to: 1 });
+  assert.deepEqual(through.assessments, { from: 1, to: 1 });
+
+  // A symbol SEC lists as gone is final, not stale: it must not age the filings or the price count.
+  d.localStorage['bar.sec'] = JSON.stringify({ at: 1, cik: { ZZAA: 123 }, gone: ['ZZAC', 'ZZGN'] });
+  d.fx.push(['ZZGN', { cik: 9, at: 0.5, f: {} }]);
+  d.fx[0][1].at = 2;
+  const gone = buildSnapshot(d).core.through;
+  assert.deepEqual(gone.fundamentals, { from: 2, to: 2 });
+  assert.deepEqual(gone.prices, { to: '2026-09-01', behind: 0 });
+});
+
 test('the fundamentals trim keeps recent periods and the newest rows', () => {
   const rec = { cik: 1, at: 1, f: { x: [{ e: '2026-06-30' }, { e: '2020-12-31' }, { e: '2010-12-31' }] } };
   assert.deepEqual(trimFacts(rec, '2022-01-01', 0).f.x.map((r) => r.e), ['2026-06-30']);
